@@ -11,6 +11,27 @@ struct Args {
     list: bool,
 }
 
+// NOTE: impls add fns to structs
+struct Theme {
+    wallpaper: &'static str,
+    border_color_focused: &'static str,
+}
+
+const ZEN: Theme = Theme {
+    wallpaper: "zen.jpg",
+    border_color_focused: "0x67c77c",
+};
+
+const HIDEOUT: Theme = Theme {
+    wallpaper: "hideout.png",
+    border_color_focused: "0x8ce8ff",
+};
+
+const FREAK: Theme = Theme {
+    wallpaper: "freak.jpg",
+    border_color_focused: "0xff79c6",
+};
+
 static WALLPAPER_ROOT: &str = "/home/aiden/.config/wallpapers/";
 
 fn main() {
@@ -23,10 +44,10 @@ fn main() {
 
     if let Some(theme) = args.theme {
         match theme.as_str() {
-            "hideout" => change_to_hideout(),
+            "hideout" => change_theme(HIDEOUT),
             "hatsune" => todo!(),
-            "zen" => change_to_zen(),
-            "freak" => change_to_freak(),
+            "zen" => change_theme(ZEN),
+            "freak" => change_theme(FREAK),
             _ => print!("Unknown theme: {}\n", theme),
         }
     }
@@ -39,11 +60,11 @@ fn list_themes() {
     print!("\tFreak - Girl drinking energy drinks, tokyonight-storm\n");
 }
 
-fn change_to_freak() {
+fn change_theme(theme: Theme) {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
-    let wallpaper = WALLPAPER_ROOT.to_owned() + "freak.jpg";
+    let wallpaper = WALLPAPER_ROOT.to_owned() + &theme.wallpaper;
     println!("Wallpaper: {}", wallpaper);
 
     Command::new("swaybg")
@@ -55,60 +76,10 @@ fn change_to_freak() {
         .unwrap();
     println!("Spawned swaybg");
 
-    // change border color to a magenta
+    // change focused border color
     Command::new("riverctl")
         .arg("border-color-focused")
-        .arg("0xff79c6")
-        .output()
-        .unwrap();
-}
-
-fn change_to_zen() {
-    Command::new("pkill").arg("swaybg").status().ok();
-    println!("Killed swaybg");
-
-    let wallpaper = WALLPAPER_ROOT.to_owned() + "zen.jpg";
-    println!("Wallpaper: {}", wallpaper);
-
-    Command::new("swaybg")
-        .arg("-i")
-        .arg(wallpaper)
-        .stdout(Stdio::null()) // tell swaybg to shut the fuck up
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
-    println!("Spawned swaybg");
-
-    // change border color to a forest green
-    Command::new("riverctl")
-        .arg("border-color-focused")
-        .arg("0x67c77c")
-        .output()
-        .unwrap();
-
-    // could be worth changing unfocused color too
-}
-
-fn change_to_hideout() {
-    Command::new("pkill").arg("swaybg").status().ok();
-    println!("Killed swaybg");
-
-    let wallpaper = WALLPAPER_ROOT.to_owned() + "hideout.png";
-    println!("Wallpaper: {}", wallpaper);
-
-    Command::new("swaybg")
-        .arg("-i")
-        .arg(wallpaper)
-        .stdout(Stdio::null()) // tell swaybg to shut the fuck up
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
-    println!("Spawned swaybg");
-
-    // change border color to a sky blue
-    Command::new("riverctl")
-        .arg("border-color-focused")
-        .arg("0x8ce8ff")
+        .arg(theme.border_color_focused)
         .output()
         .unwrap();
 }
