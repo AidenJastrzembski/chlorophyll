@@ -11,6 +11,8 @@ struct Args {
     list: bool,
 }
 
+static WALLPAPER_ROOT: &str = "/home/aiden/.config/wallpapers/";
+
 fn main() {
     let args = Args::parse();
 
@@ -41,40 +43,72 @@ fn change_to_freak() {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
+    let wallpaper = WALLPAPER_ROOT.to_owned() + "freak.jpg";
+    println!("Wallpaper: {}", wallpaper);
+
     Command::new("swaybg")
         .arg("-i")
-        .arg("/home/aiden/.config/wallpapers/freak.jpg")
+        .arg(wallpaper)
         .stdout(Stdio::null()) // tell swaybg to shut the fuck up
         .stderr(Stdio::null())
         .spawn()
         .unwrap();
     println!("Spawned swaybg");
+
+    // change border color to a magenta
+    Command::new("riverctl")
+        .arg("border-color-focused")
+        .arg("0xff79c6")
+        .output()
+        .unwrap();
 }
 
 fn change_to_zen() {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
+    let wallpaper = WALLPAPER_ROOT.to_owned() + "zen.jpg";
+    println!("Wallpaper: {}", wallpaper);
+
     Command::new("swaybg")
         .arg("-i")
-        .arg("/home/aiden/.config/wallpapers/zen.jpg")
+        .arg(wallpaper)
         .stdout(Stdio::null()) // tell swaybg to shut the fuck up
         .stderr(Stdio::null())
         .spawn()
         .unwrap();
     println!("Spawned swaybg");
+
+    // change border color to a forest green
+    Command::new("riverctl")
+        .arg("border-color-focused")
+        .arg("0x67c77c")
+        .output()
+        .unwrap();
+
+    // could be worth changing unfocused color too
 }
 
 fn change_to_hideout() {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
+    let wallpaper = WALLPAPER_ROOT.to_owned() + "hideout.png";
+    println!("Wallpaper: {}", wallpaper);
+
     Command::new("swaybg")
         .arg("-i")
-        .arg("/home/aiden/.config/wallpapers/hideout.png")
+        .arg(wallpaper)
         .stdout(Stdio::null()) // tell swaybg to shut the fuck up
         .stderr(Stdio::null())
         .spawn()
         .unwrap();
     println!("Spawned swaybg");
+
+    // change border color to a sky blue
+    Command::new("riverctl")
+        .arg("border-color-focused")
+        .arg("0x8ce8ff")
+        .output()
+        .unwrap();
 }
