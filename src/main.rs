@@ -77,10 +77,11 @@ fn change_theme(theme: Theme) {
     println!("Killed swaybg");
 
     // see which one we actually need
-    Command::new("pkill").arg("swww").status().ok();
     Command::new("pkill")
+        .arg("-9")
         .arg("swww-daemon")
-        .stdout(Stdio::null()) // tell swaybg to shut the fuck up
+        .stdin(Stdio::null())
+        .stdout(Stdio::null()) // tell swww to shut the fuck up
         .stderr(Stdio::null())
         .status()
         .ok();
@@ -90,13 +91,19 @@ fn change_theme(theme: Theme) {
     println!("Wallpaper: {}", wallpaper);
 
     if theme.is_animated {
-        Command::new("swww-daemon").spawn().unwrap();
+        Command::new("swww-daemon")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null()) // tell swww to shut the fuck up
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
         Command::new("swww")
             .arg("img")
             .arg(wallpaper)
-            .stdout(Stdio::null()) // tell swaybg to shut the fuck up
+            .stdin(Stdio::null())
+            .stdout(Stdio::null()) // tell swww to shut the fuck up
             .stderr(Stdio::null())
-            .spawn()
+            .status()
             .unwrap();
         println!("Spawned swww");
     } else {
