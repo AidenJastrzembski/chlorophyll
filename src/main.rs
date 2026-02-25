@@ -23,7 +23,7 @@ impl Theme {
     pub fn color(&self) -> String {
         println!("wallpaper: {}", self.wallpaper);
         let wall_path = WALLPAPER_ROOT.to_owned() + self.wallpaper;
-        let rbg = colors::average_image_colors(wall_path.as_str())
+        let rbg = colors::dominant_color(wall_path.as_str())
             .context("failed to get color")
             .unwrap();
         format!("0x{:02x}{:02x}{:02x}", rbg.0, rbg.1, rbg.2)
