@@ -1,146 +1,116 @@
 use anyhow::{Context, Result};
+use color_thief::{ColorFormat, get_palette};
 use image::ImageReader;
 
-/// Extract the dominant vibrant color from an image.
-///
-/// 1. Thumbnails to 64×64 for speed.
-/// 2. K-means (k=8) to find dominant color clusters.
-/// 3. Scores clusters by size × saturation boost, filtering near-black/white.
-/// 4. Returns the highest-scoring cluster centroid as (R, G, B).
 pub fn dominant_color(path: &str) -> Result<(u64, u64, u64)> {
+    // grab the image from the path
     let img = ImageReader::open(path)
         .context("Failed to open image")?
         .decode()
         .context("Failed to decode image")?;
 
-    let thumb = img.thumbnail(64, 64).to_rgb8();
+    // convert the image to a 128x128 thumbnail so that processing is much faster
+    let thumb = img.thumbnail(128, 128).to_rgb8();
+    // &[u8], RGB packed
+    let pixels = thumb.as_raw();
 
-    let pixels: Vec<[f64; 3]> = thumb
-        .pixels()
-        .map(|p| [p.0[0] as f64, p.0[1] as f64, p.0[2] as f64])
-        .collect();
+    // quality 1 = thorough, 10 = fast; 5 is a good balance
+    // max_colors = 8 creates a color pallete with enough colors for a nice selection
+    let palette = get_palette(pixels, ColorFormat::Rgb, 8, 8)
+        .map_err(|e| anyhow::anyhow!("color_thief failed: {:?}", e))?;
 
-    let k = 8;
-    let centroids = kmeans(&pixels, k, 20);
-
-    // Score each cluster: size * (1.0 + saturation), skip near-black/white
+    // Pick the most vibrant color from the palette
+    // the equation is s^3 * (1 - |l - 0.5| * 2)
+    //
+    // s is cubed because we want to favor colors that are more saturated,
+    // then we multiply by 1 - |l - 0.5| * 2 to favor colors that are closer to 0.5 lightness
     let mut best_score = -1.0f64;
-    let mut best_color = [128.0, 128.0, 128.0];
+    let mut best_color = (128u64, 128u64, 128u64);
 
-    for (centroid, count) in &centroids {
-        let (_, s, l) = rgb_to_hsl(centroid[0], centroid[1], centroid[2]);
+    // for each color in the pallete, calculate its saturation and lightness,
+    // then score it based on those values
+    for color in &palette {
+        // convert to HSL
+        let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
 
-        // Filter near-black and near-white
-        if l < 0.08 || l > 0.92 {
+        // filter out colors that are too dark or too light
+        if !(0.15..=0.85).contains(&l) {
+            continue;
+        }
+        // filter out colors that are too desaturated
+        if s < 0.25 {
             continue;
         }
 
-        let score = (*count as f64) * (1.0 + s);
+        // score the color
+        let score = s.powi(3) * (1.0 - (l - 0.5).abs() * 2.0); // favor mid-lightness too
+        // update the best score, and the best color
         if score > best_score {
             best_score = score;
-            best_color = *centroid;
+            best_color = (color.r as u64, color.g as u64, color.b as u64);
         }
     }
 
-    Ok((
-        best_color[0].round() as u64,
-        best_color[1].round() as u64,
-        best_color[2].round() as u64,
-    ))
-}
-
-/// Simple K-means clustering on RGB pixels.
-/// Returns Vec of (centroid_rgb, pixel_count).
-fn kmeans(pixels: &[[f64; 3]], k: usize, iterations: usize) -> Vec<([f64; 3], usize)> {
-    let n = pixels.len();
-    if n == 0 {
-        return vec![([0.0; 3], 0); k];
-    }
-
-    // Initialize centroids by evenly sampling the pixel list
-    let mut centroids: Vec<[f64; 3]> = (0..k)
-        .map(|i| pixels[i * n / k])
-        .collect();
-
-    let mut assignments = vec![0usize; n];
-
-    for _ in 0..iterations {
-        // Assign each pixel to nearest centroid
-        for (i, px) in pixels.iter().enumerate() {
-            let mut best_dist = f64::MAX;
-            let mut best_k = 0;
-            for (j, c) in centroids.iter().enumerate() {
-                let dist = (px[0] - c[0]).powi(2)
-                    + (px[1] - c[1]).powi(2)
-                    + (px[2] - c[2]).powi(2);
-                if dist < best_dist {
-                    best_dist = dist;
-                    best_k = j;
-                }
+    // Fallback: just pick most saturated if everything got filtered
+    if best_score < 0.0 {
+        for color in &palette {
+            let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
+            if !(0.1..0.9).contains(&l) {
+                continue;
             }
-            assignments[i] = best_k;
-        }
-
-        // Recompute centroids
-        let mut sums = vec![[0.0f64; 3]; k];
-        let mut counts = vec![0usize; k];
-
-        for (i, px) in pixels.iter().enumerate() {
-            let c = assignments[i];
-            sums[c][0] += px[0];
-            sums[c][1] += px[1];
-            sums[c][2] += px[2];
-            counts[c] += 1;
-        }
-
-        for j in 0..k {
-            if counts[j] > 0 {
-                centroids[j] = [
-                    sums[j][0] / counts[j] as f64,
-                    sums[j][1] / counts[j] as f64,
-                    sums[j][2] / counts[j] as f64,
-                ];
+            if s > best_score {
+                best_score = s;
+                best_color = (color.r as u64, color.g as u64, color.b as u64);
             }
         }
     }
 
-    // Build final counts
-    let mut counts = vec![0usize; k];
-    for &a in &assignments {
-        counts[a] += 1;
-    }
-
-    centroids.into_iter().zip(counts).collect()
+    Ok(best_color)
 }
 
-/// Convert RGB [0..255] to HSL [0..1].
 fn rgb_to_hsl(r: f64, g: f64, b: f64) -> (f64, f64, f64) {
+    // convert the [0-255] to [0-1]
     let r = r / 255.0;
     let g = g / 255.0;
     let b = b / 255.0;
 
+    // find the max and min between the colors
     let max = r.max(g).max(b);
     let min = r.min(g).min(b);
+
+    // calculate the lightness
+    // lightness is the midpoint between the most saturated and least saturated colors
     let l = (max + min) / 2.0;
 
+    // if in a grey scale return early.
     if (max - min).abs() < 1e-10 {
         return (0.0, 0.0, l);
     }
 
-    let d = max - min;
+    // calculate the saturation
+    // because hsl is a bicone shape, it narrows at the edges (light and dark)
+    // the maximum possible diff isnt always 1, it depends on the lightness value,
+    // so we need to normalize it.
+    let diff = max - min; // the diff is the chroma range.
     let s = if l > 0.5 {
-        d / (2.0 - max - min)
+        diff / (2.0 - max - min)
     } else {
-        d / (max + min)
+        diff / (max + min)
     };
 
+    // calculate the hue
+    // the hue is an angle on the color wheel, but instead of 0-360 we use 0-1
+    // the logic works by determining which color is dominant, and then adjusting by the other
+    // colors.
+    // Red=0°  Yellow=60°  Green=120°  Cyan=180°  Blue=240°  Magenta=300°  Red=360°
+    // 0       1/6         2/6         3/6        4/6        5/6           1
+    // just like the unit circle minus the pi and / 2 !
     let h = if (max - r).abs() < 1e-10 {
-        ((g - b) / d + if g < b { 6.0 } else { 0.0 }) / 6.0
+        ((g - b) / diff + if g < b { 6.0 } else { 0.0 }) / 6.0
     } else if (max - g).abs() < 1e-10 {
-        ((b - r) / d + 2.0) / 6.0
+        ((b - r) / diff + 2.0) / 6.0
     } else {
-        ((r - g) / d + 4.0) / 6.0
+        ((r - g) / diff + 4.0) / 6.0
     };
-
     (h, s, l)
 }
