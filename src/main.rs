@@ -1,5 +1,8 @@
+mod utils;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::process::{Command, Stdio};
+use utils::colors;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -11,68 +14,74 @@ struct Args {
     list: bool,
 }
 
-// NOTE: impls add fns to structs
 struct Theme {
     wallpaper: &'static str,
-    border_color_focused: &'static str,
     is_animated: bool,
+}
+
+impl Theme {
+    pub fn color(&self) -> String {
+        println!("wallpaper: {}", self.wallpaper);
+        let wall_path = WALLPAPER_ROOT.to_owned() + self.wallpaper;
+        let rbg = colors::average_image_colors(wall_path.as_str())
+            .context("failed to get color")
+            .unwrap();
+        format!("0x{:02x}{:02x}{:02x}", rbg.0, rbg.1, rbg.2)
+    }
 }
 
 const ZEN: Theme = Theme {
     wallpaper: "zen.jpg",
-    border_color_focused: "0x67c77c",
     is_animated: false,
 };
 
 const HIDEOUT: Theme = Theme {
     wallpaper: "hideout.png",
-    border_color_focused: "0x8ce8ff",
     is_animated: false,
 };
 
 const FREAK: Theme = Theme {
     wallpaper: "freak.jpg",
-    border_color_focused: "0xff79c6",
     is_animated: false,
 };
 
 const BLEAK: Theme = Theme {
     wallpaper: "bleak.gif",
-    border_color_focused: "0xc9c9c9",
     is_animated: true,
 };
 
 static WALLPAPER_ROOT: &str = "/home/aiden/.config/wallpapers/";
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.list {
         list_themes();
-        return;
+        return Ok(());
     }
 
     if let Some(theme) = args.theme {
         match theme.as_str() {
-            "hideout" => change_theme(HIDEOUT),
+            "hideout" => change_theme(HIDEOUT)?,
             "hatsune" => todo!(),
-            "zen" => change_theme(ZEN),
-            "freak" => change_theme(FREAK),
-            "bleak" => change_theme(BLEAK),
-            _ => print!("Unknown theme: {}\n", theme),
+            "zen" => change_theme(ZEN)?,
+            "freak" => change_theme(FREAK)?,
+            "bleak" => change_theme(BLEAK)?,
+            _ => println!("Unknown theme: {}", theme),
         }
     }
+    Ok(())
 }
 
 fn list_themes() {
-    print!("Available themes:\n\n");
-    print!("\tZen - Dream bedroom, kanagawa\n");
-    print!("\tHideout - Cool hideout, nostalgic, rose-pine-moon\n");
-    print!("\tFreak - Girl drinking energy drinks, tokyonight-storm\n");
-    print!("\tBleak - Lonely animated town, vague\n");
+    println!("Available themes:\n");
+    println!("\tZen - Dream bedroom, kanagawa");
+    println!("\tHideout - Cool hideout, nostalgic, rose-pine-moon");
+    println!("\tFreak - Girl drinking energy drinks, tokyonight-storm");
+    println!("\tBleak - Lonely animated town, vague");
 }
 
-fn change_theme(theme: Theme) {
+fn change_theme(theme: Theme) -> Result<()> {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
@@ -96,7 +105,8 @@ fn change_theme(theme: Theme) {
             .stdout(Stdio::null()) // tell swww to shut the fuck up
             .stderr(Stdio::null())
             .spawn()
-            .unwrap();
+            .context("Failed to run swww-daemon")?;
+
         Command::new("swww")
             .arg("img")
             .arg(wallpaper)
@@ -105,6 +115,7 @@ fn change_theme(theme: Theme) {
             .stderr(Stdio::null())
             .status()
             .unwrap();
+
         println!("Spawned swww");
     } else {
         Command::new("swaybg")
@@ -113,14 +124,17 @@ fn change_theme(theme: Theme) {
             .stdout(Stdio::null()) // tell swaybg to shut the fuck up
             .stderr(Stdio::null())
             .spawn()
-            .unwrap();
+            .context("Failed to run swaybg")?;
         println!("Spawned swaybg");
     }
 
     // change focused border color
+    println!("Changing focused border color to: {}", theme.color());
     Command::new("riverctl")
         .arg("border-color-focused")
-        .arg(theme.border_color_focused)
+        .arg(theme.color())
         .output()
         .unwrap();
+
+    Ok(())
 }
