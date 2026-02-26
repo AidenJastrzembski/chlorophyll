@@ -6,12 +6,30 @@ mod utils;
 use crate::cli::{change_theme, list_themes};
 use crate::config::Config;
 use crate::theme::{Theme, find_wallpaper};
+use crate::utils::cache::clear_cache;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+// TODO:  create preview command which displays the palette (and potentially the wallpaper)
+// either in ratatui or using ascii characters
+//
+// TODO: refactor all/most commands to be subcommands
+//
+// TODO: add --no-cache flag
+//
+// TODO: list command should be a ratatui interactive screen with a searchable list, which
+// displays the name, and a color palette preview
+//
+// TODO: build in some default templates for common tools like waybar and rofi (think like pywal)
+//
+// TODO: build in a templating system which allows users to create templates which will
+// apply theme changes to different tools
+//
+// TODO: build out custom color-thief implementation
+
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, arg_required_else_help = true)]
 struct Args {
     #[command(subcommand)]
     command: Option<Command>,
@@ -32,6 +50,8 @@ struct Args {
 enum Command {
     /// Create the config file at ~/.config/chlorophyll/config.toml
     Init,
+    /// Clear the cache stored in ~/.cache/chlorophyll
+    Clear,
 }
 
 fn main() -> Result<()> {
@@ -39,6 +59,10 @@ fn main() -> Result<()> {
 
     if let Some(Command::Init) = args.command {
         return Config::init();
+    }
+
+    if let Some(Command::Clear) = args.command {
+        return clear_cache();
     }
 
     let config = Config::load()?;
@@ -60,10 +84,5 @@ fn main() -> Result<()> {
         change_theme(&theme)?;
         return Ok(());
     }
-
-    // no args: print help
-    use clap::CommandFactory;
-    Args::command().print_help()?;
-    println!();
     Ok(())
 }

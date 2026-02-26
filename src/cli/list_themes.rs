@@ -1,6 +1,9 @@
 use crate::theme::{Theme, list_wallpapers};
 use anyhow::Result;
 
+/// TODO: eventually this will be a tui using ratatui
+///
+/// loops through all wallpapers in the given directory and prints their names
 pub fn list_themes(wallpaper_dir: &str) -> Result<()> {
     let wallpapers = list_wallpapers(wallpaper_dir)?;
     if wallpapers.is_empty() {

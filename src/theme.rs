@@ -13,30 +13,39 @@ pub struct Theme {
 }
 
 impl Theme {
+    /// create the theme being used at runtime
     pub fn new(wallpaper: PathBuf) -> Self {
         Theme { wallpaper }
     }
 
-    /// Detected from file extension (gif, webp, apng)
+    /// detected from file extension
     pub fn is_animated(&self) -> bool {
-        self.wallpaper
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| ANIMATED_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
-            .unwrap_or(false)
+        let ext = match self.wallpaper.extension() {
+            Some(ext) => ext.to_str().unwrap(),
+            None => return false,
+        };
+        ANIMATED_EXTENSIONS.contains(&ext.to_lowercase().as_str())
     }
 
-    /// SHA256 of wallpaper_path + ":" + file_contents
+    /// sha256 of wallpaper_path + ":" + file_contents
     pub fn hash(&self) -> Result<String> {
+        // read the wallpaper file into a vec of u8 (a buffer)
+        // NOTE: if large files slow system down or use too much mem (doubt),
+        // use a 65535 byte buffer (64k bytes)
         let contents = fs::read(&self.wallpaper).context("Failed to read wallpaper file")?;
+
         let mut hasher = Sha256::new();
+        // update the hasher with the path
         hasher.update(self.wallpaper.to_string_lossy().as_bytes());
+        // add the separator
         hasher.update(b":");
+        // add the buffer
         hasher.update(&contents);
+        // return the hash as String
         Ok(format!("{:x}", hasher.finalize()))
     }
 
-    /// Check cache, compute if miss, return scored palette (highest score first)
+    /// check cache, compute if miss, return scored palette (highest score first)
     pub fn palette(&self) -> Result<Vec<(u8, u8, u8)>> {
         let hash = self.hash()?;
 
@@ -49,7 +58,7 @@ impl Theme {
         Ok(palette)
     }
 
-    /// Convenience: palette()[0] formatted as "0xRRGGBB"
+    /// dx helper fn: palette()[0] formatted as "0xRRGGBB"
     pub fn dominant_color(&self) -> Result<String> {
         let palette = self.palette()?;
         let (r, g, b) = palette[0];
@@ -57,7 +66,7 @@ impl Theme {
     }
 }
 
-/// Scan `dir` for a file matching `name.*` with a supported image extension
+/// for extension type, if name.ext exists in the wallpaper dir, return path else bail with message
 pub fn find_wallpaper(dir: &str, name: &str) -> Result<PathBuf> {
     for ext in IMAGE_EXTENSIONS {
         let path = PathBuf::from(dir).join(format!("{name}.{ext}"));
@@ -69,16 +78,26 @@ pub fn find_wallpaper(dir: &str, name: &str) -> Result<PathBuf> {
 }
 
 /// Return all image file paths in `dir`
+/// This works but i find it hard to read. might just
+/// be a rust skill issue but the zig equiv is much cleaner
 pub fn list_wallpapers(dir: &str) -> Result<Vec<PathBuf>> {
-    let entries = fs::read_dir(dir).context(format!("Failed to read directory: {dir}"))?;
-    let mut wallpapers: Vec<PathBuf> = entries
-        .filter_map(|e| e.ok())
-        .map(|e| e.path())
-        .filter(|p| {
-            p.extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| IMAGE_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
-                .unwrap_or(false)
+    let mut wallpapers: Vec<PathBuf> = fs::read_dir(dir)
+        .with_context(|| format!("Failed to read directory: {dir}"))?
+        // filter out non-image files
+        .filter_map(|entry| {
+            let entry = entry.ok()?; // skip unreadable entries
+            let path = entry.path();
+            let ext = path.extension()?.to_str()?;
+
+            // check if file extension is in IMAGE_EXTENSIONS
+            if IMAGE_EXTENSIONS
+                .iter()
+                .any(|valid| ext.to_lowercase().ends_with(valid))
+            {
+                Some(path)
+            } else {
+                None
+            }
         })
         .collect();
     wallpapers.sort();
