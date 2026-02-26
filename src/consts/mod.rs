@@ -1,4 +1,6 @@
 use crate::Theme;
+// TODO: these should be defined by the user in their config, or better yet
+// just pass the wallpaper in at runtime and let the cli handle everything else
 
 pub const ZEN: Theme = Theme {
     wallpaper: "zen.jpg",

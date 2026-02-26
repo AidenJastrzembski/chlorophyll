@@ -33,6 +33,7 @@ impl Theme {
     }
 }
 
+// TODO: should be defined by user in their config
 static WALLPAPER_ROOT: &str = "/home/aiden/.config/wallpapers/";
 
 fn main() -> Result<()> {
