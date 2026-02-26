@@ -27,6 +27,9 @@ use std::path::PathBuf;
 // apply theme changes to different tools
 //
 // TODO: build out custom color-thief implementation
+//
+// TODO: reapply command which allows users to reapply the last theme, usefull for
+// startup sequences
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None, arg_required_else_help = true)]
