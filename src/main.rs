@@ -1,58 +1,69 @@
 mod cli;
-mod consts;
+mod config;
+mod theme;
 mod utils;
+
 use crate::cli::{change_theme, list_themes};
-use crate::consts::{BLEAK, FREAK, HIDEOUT, ZEN};
-use crate::utils::colors;
-use anyhow::{Context, Result};
-use clap::Parser;
+use crate::config::Config;
+use crate::theme::{Theme, find_wallpaper};
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
-    theme: Option<String>,
+    #[command(subcommand)]
+    command: Option<Command>,
 
-    #[arg(short, long, default_value_t = false)]
+    /// Wallpaper name (e.g. "zen" finds zen.* in wallpaper dir)
+    wallpaper: Option<String>,
+
+    /// Path to a specific image file
+    #[arg(short, long)]
+    image: Option<PathBuf>,
+
+    /// List available wallpapers
+    #[arg(short, long)]
     list: bool,
 }
 
-struct Theme {
-    wallpaper: &'static str,
-    is_animated: bool,
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Create the config file at ~/.config/chlorophyll/config.toml
+    Init,
 }
-
-impl Theme {
-    pub fn color(&self) -> String {
-        println!("wallpaper: {}", self.wallpaper);
-        let wall_path = WALLPAPER_ROOT.to_owned() + self.wallpaper;
-        let rbg = colors::dominant_color(wall_path.as_str())
-            .context("failed to get color")
-            .unwrap();
-        format!("0x{:02x}{:02x}{:02x}", rbg.0, rbg.1, rbg.2)
-    }
-}
-
-// TODO: should be defined by user in their config
-static WALLPAPER_ROOT: &str = "/home/aiden/.config/wallpapers/";
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    if let Some(Command::Init) = args.command {
+        return Config::init();
+    }
+
+    let config = Config::load()?;
+
     if args.list {
-        list_themes();
+        list_themes(&config.wallpaper_dir)?;
         return Ok(());
     }
 
-    if let Some(theme) = args.theme {
-        match theme.as_str() {
-            "hideout" => change_theme(HIDEOUT)?,
-            "hatsune" => todo!(),
-            "zen" => change_theme(ZEN)?,
-            "freak" => change_theme(FREAK)?,
-            "bleak" => change_theme(BLEAK)?,
-            _ => println!("Unknown theme: {}", theme),
-        }
+    if let Some(path) = args.image {
+        let theme = Theme::new(path);
+        change_theme(&theme)?;
+        return Ok(());
     }
+
+    if let Some(name) = args.wallpaper {
+        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
+        let theme = Theme::new(path);
+        change_theme(&theme)?;
+        return Ok(());
+    }
+
+    // no args: print help
+    use clap::CommandFactory;
+    Args::command().print_help()?;
+    println!();
     Ok(())
 }

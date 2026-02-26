@@ -1,9 +1,11 @@
 use anyhow::{Context, Result};
 use color_thief::{ColorFormat, get_palette};
 use image::ImageReader;
+use std::path::Path;
 
-pub fn dominant_color(path: &str) -> Result<(u64, u64, u64)> {
-    // grab the image from the path
+/// Returns all 8 palette colors sorted by vibrancy score (highest first).
+/// Uses HSL-based scoring: s^3 * (1 - |l - 0.5| * 2)
+pub fn scored_palette(path: &Path) -> Result<Vec<(u8, u8, u8)>> {
     let img = ImageReader::open(path)
         .context("Failed to open image")?
         .decode()
@@ -11,7 +13,6 @@ pub fn dominant_color(path: &str) -> Result<(u64, u64, u64)> {
 
     // convert the image to a 128x128 thumbnail so that processing is much faster
     let thumb = img.thumbnail(128, 128).to_rgb8();
-    // &[u8], RGB packed
     let pixels = thumb.as_raw();
 
     // quality 1 = thorough, 10 = fast; 5 is a good balance
@@ -19,53 +20,45 @@ pub fn dominant_color(path: &str) -> Result<(u64, u64, u64)> {
     let palette = get_palette(pixels, ColorFormat::Rgb, 8, 8)
         .map_err(|e| anyhow::anyhow!("color_thief failed: {:?}", e))?;
 
-    // Pick the most vibrant color from the palette
+    // Score each color by vibrancy
     // the equation is s^3 * (1 - |l - 0.5| * 2)
     //
     // s is cubed because we want to favor colors that are more saturated,
     // then we multiply by 1 - |l - 0.5| * 2 to favor colors that are closer to 0.5 lightness
-    let mut best_score = -1.0f64;
-    let mut best_color = (128u64, 128u64, 128u64);
-
-    // for each color in the pallete, calculate its saturation and lightness,
-    // then score it based on those values
-    for color in &palette {
-        // convert to HSL
-        let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
-
-        // filter out colors that are too dark or too light
-        if !(0.15..=0.85).contains(&l) {
-            continue;
-        }
-        // filter out colors that are too desaturated
-        if s < 0.25 {
-            continue;
-        }
-
-        // score the color
-        let score = s.powi(3) * (1.0 - (l - 0.5).abs() * 2.0); // favor mid-lightness too
-        // update the best score, and the best color
-        if score > best_score {
-            best_score = score;
-            best_color = (color.r as u64, color.g as u64, color.b as u64);
-        }
-    }
-
-    // Fallback: just pick most saturated if everything got filtered
-    if best_score < 0.0 {
-        for color in &palette {
+    let mut scored: Vec<(f64, (u8, u8, u8))> = palette
+        .iter()
+        .map(|color| {
             let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
-            if !(0.1..0.9).contains(&l) {
-                continue;
-            }
-            if s > best_score {
-                best_score = s;
-                best_color = (color.r as u64, color.g as u64, color.b as u64);
-            }
-        }
+
+            let score = if !(0.15..=0.85).contains(&l) || s < 0.25 {
+                // filtered colors get a negative score so they sort to the end
+                -1.0 + s * 0.01
+            } else {
+                s.powi(3) * (1.0 - (l - 0.5).abs() * 2.0)
+            };
+
+            (score, (color.r, color.g, color.b))
+        })
+        .collect();
+
+    // sort descending by score
+    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+
+    // if every color got filtered (all scores negative), fall back to sorting by saturation
+    // with a relaxed lightness filter
+    if scored[0].0 < 0.0 {
+        scored = palette
+            .iter()
+            .map(|color| {
+                let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
+                let score = if (0.1..0.9).contains(&l) { s } else { -1.0 };
+                (score, (color.r, color.g, color.b))
+            })
+            .collect();
+        scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
     }
 
-    Ok(best_color)
+    Ok(scored.into_iter().map(|(_, color)| color).collect())
 }
 
 fn rgb_to_hsl(r: f64, g: f64, b: f64) -> (f64, f64, f64) {

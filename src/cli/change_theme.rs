@@ -1,9 +1,8 @@
-use crate::Theme;
-use crate::WALLPAPER_ROOT;
+use crate::theme::Theme;
 use anyhow::{Context, Result};
 use std::process::{Command, Stdio};
 
-pub fn change_theme(theme: Theme) -> Result<()> {
+pub fn change_theme(theme: &Theme) -> Result<()> {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
@@ -18,10 +17,10 @@ pub fn change_theme(theme: Theme) -> Result<()> {
         .ok();
     println!("Killed swww");
 
-    let wallpaper = WALLPAPER_ROOT.to_owned() + theme.wallpaper;
-    println!("Wallpaper: {}", wallpaper);
+    let wallpaper = &theme.wallpaper;
+    println!("Wallpaper: {}", wallpaper.display());
 
-    if theme.is_animated {
+    if theme.is_animated() {
         Command::new("swww-daemon")
             .stdin(Stdio::null())
             .stdout(Stdio::null()) // tell swww to shut the fuck up
@@ -51,10 +50,11 @@ pub fn change_theme(theme: Theme) -> Result<()> {
     }
 
     // change focused border color
-    println!("Changing focused border color to: {}", theme.color());
+    let color = theme.dominant_color()?;
+    println!("Changing focused border color to: {}", color);
     Command::new("riverctl")
         .arg("border-color-focused")
-        .arg(theme.color())
+        .arg(color)
         .output()
         .unwrap();
 
