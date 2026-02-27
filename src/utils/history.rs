@@ -1,3 +1,5 @@
+use crate::cli::change_theme;
+use crate::theme::Theme;
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::PathBuf;
@@ -19,11 +21,18 @@ pub fn save_wallpaper(path: &std::path::Path) -> Result<()> {
 }
 
 /// loads the last applied wallpaper path
-pub fn load_wallpaper() -> Result<PathBuf> {
+fn load_wallpaper() -> Result<PathBuf> {
     let file = history_file()?;
     if !file.exists() {
         bail!("No previous wallpaper found. Apply a theme first.");
     }
     let data = fs::read_to_string(&file).context("Failed to read last wallpaper state")?;
     Ok(PathBuf::from(data.trim()))
+}
+
+pub fn reapply_last_wallpaper() -> Result<()> {
+    let path = load_wallpaper()?;
+    let theme = Theme::new(path);
+    change_theme(&theme)?;
+    Ok(())
 }
