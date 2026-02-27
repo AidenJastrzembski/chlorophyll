@@ -14,13 +14,9 @@ use clap::{Parser, Subcommand};
 // TODO:  create preview command which displays the palette (and potentially the wallpaper)
 // either in ratatui or using ascii characters
 //
-// TODO: refactor all/most commands to be subcommands
-//
 // TODO: write tests for all commands
 //
 // TODO: add --no-cache flag
-//
-// TODO: support images not in the wallpaper dir
 //
 // TODO: list command should be a ratatui interactive screen with a searchable list, which
 // displays the name, and a color palette preview

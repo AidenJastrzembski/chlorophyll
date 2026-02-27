@@ -66,8 +66,26 @@ impl Theme {
     }
 }
 
+/// Try to find the name as a file on the system. if found, return the path as a PathBuf
+///
 /// for extension type, if name.ext exists in the wallpaper dir, return path else bail with message
 pub fn find_wallpaper(dir: &str, name: &str) -> Result<PathBuf> {
+    // check if name is a direct path to an existing image file
+    let direct = PathBuf::from(name);
+    if direct.is_file()
+        && direct
+            // .extension() returns Option<&OsStr>
+            .extension()
+            // .and_then() unwraps the Some, applies the 'e.to_str()',
+            // and re-wraps the result. If it's None, it returns the None
+            .and_then(|e| e.to_str())
+            // .is_some_and() returns true only if the Option is Some
+            // AND the inner value is true
+            .is_some_and(|ext| IMAGE_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
+    {
+        return Ok(direct);
+    }
+
     for ext in IMAGE_EXTENSIONS {
         let path = PathBuf::from(dir).join(format!("{name}.{ext}"));
         if path.exists() {
