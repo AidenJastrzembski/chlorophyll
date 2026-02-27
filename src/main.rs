@@ -7,6 +7,7 @@ use crate::cli::{change_theme, list_themes};
 use crate::config::Config;
 use crate::theme::{Theme, find_wallpaper};
 use crate::utils::cache::clear_cache;
+use crate::utils::history::load_wallpaper;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -28,9 +29,6 @@ use std::path::PathBuf;
 //
 // TODO: build out custom color-thief implementation
 //
-// TODO: reapply command which allows users to reapply the last theme, usefull for
-// startup sequences
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None, arg_required_else_help = true)]
 struct Args {
@@ -55,6 +53,8 @@ enum Command {
     Init,
     /// Clear the cache stored in ~/.cache/chlorophyll
     Clear,
+    /// Reapply the last used wallpaper theme. Useful for startup sequences
+    Reapply,
 }
 
 fn main() -> Result<()> {
@@ -66,6 +66,13 @@ fn main() -> Result<()> {
 
     if let Some(Command::Clear) = args.command {
         return clear_cache();
+    }
+
+    if let Some(Command::Reapply) = args.command {
+        let path = load_wallpaper()?;
+        let theme = Theme::new(path);
+        change_theme(&theme)?;
+        return Ok(());
     }
 
     let config = Config::load()?;
