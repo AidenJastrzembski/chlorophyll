@@ -14,7 +14,7 @@ pub struct ComptimeTemplate {
 
 /// This is where you actually put the templates which are included
 /// into the bundle
-pub static STARTERS: &[ComptimeTemplate] = &[
+pub static COMPTIME_TEMPLATES: &[ComptimeTemplate] = &[
     ComptimeTemplate {
         name: "waybar",
         filename: "colors-waybar.css",
@@ -31,14 +31,14 @@ pub static STARTERS: &[ComptimeTemplate] = &[
     },
 ];
 
-/// find the starter template which has the same name
+/// find the comptime template which has the same name
 pub fn find_comptime_template(name: &str) -> Option<&'static ComptimeTemplate> {
-    STARTERS.iter().find(|s| s.name == name)
+    COMPTIME_TEMPLATES.iter().find(|s| s.name == name)
 }
 
 /// list comptime template options
 pub fn list_names() -> Vec<&'static str> {
-    STARTERS.iter().map(|s| s.name).collect()
+    COMPTIME_TEMPLATES.iter().map(|s| s.name).collect()
 }
 
 impl ComptimeTemplate {
