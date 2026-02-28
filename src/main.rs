@@ -17,7 +17,6 @@ use clap::{Parser, Subcommand};
 //
 // TODO: write tests for all commands
 //
-// TODO: add --no-cache flag
 //
 // TODO: list command should be a ratatui interactive screen with a searchable list, which
 // displays the name, and a color palette preview
@@ -35,6 +34,9 @@ use clap::{Parser, Subcommand};
 struct Cli {
     #[command(subcommand)]
     command: Command,
+    /// skip cache and force palette re-extraction
+    #[arg(long)]
+    no_cache: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -70,19 +72,25 @@ impl Cli {
                 clear_cache()?;
             }
             Command::Reapply => {
-                reapply_last_wallpaper(&config.templates)?;
+                reapply_last_wallpaper(&config.templates, self.no_cache)?;
             }
             Command::List => {
                 list_themes(&config.wallpaper_dir)?;
             }
             Command::From { name } => {
                 let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                let theme = Theme::new(path);
+                let mut theme = Theme::new(path);
+                if self.no_cache {
+                    theme = theme.skip_cache();
+                }
                 change_theme(&theme, &config.templates)?;
             }
             Command::Cache { name } => {
                 let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                let theme = Theme::new(path);
+                let mut theme = Theme::new(path);
+                if self.no_cache {
+                    theme = theme.skip_cache();
+                }
                 // generating the palette will cache the results
                 theme.palette()?;
             }

@@ -10,12 +10,22 @@ const ANIMATED_EXTENSIONS: &[&str] = &["gif", "webp", "apng"];
 
 pub struct Theme {
     pub wallpaper: PathBuf,
+    use_cache: bool,
 }
 
 impl Theme {
     /// create the theme being used at runtime
     pub fn new(wallpaper: PathBuf) -> Self {
-        Theme { wallpaper }
+        Theme {
+            wallpaper,
+            use_cache: true,
+        }
+    }
+
+    /// disable cache read and write
+    pub fn skip_cache(mut self) -> Self {
+        self.use_cache = false;
+        self
     }
 
     /// detected from file extension
@@ -48,6 +58,10 @@ impl Theme {
     /// check cache, compute if miss, return scored palette (highest score first)
     pub fn palette(&self) -> Result<Vec<(u8, u8, u8)>> {
         let hash = self.hash()?;
+
+        if !self.use_cache {
+            return colors::scored_palette(&self.wallpaper);
+        }
 
         if let Some(cached) = cache::load_cache(&hash)? {
             return Ok(cached);

@@ -31,9 +31,12 @@ fn load_wallpaper() -> Result<PathBuf> {
     Ok(PathBuf::from(data.trim()))
 }
 
-pub fn reapply_last_wallpaper(templates: &[Template]) -> Result<()> {
+pub fn reapply_last_wallpaper(templates: &[Template], no_cache: bool) -> Result<()> {
     let path = load_wallpaper()?;
-    let theme = Theme::new(path);
+    let mut theme = Theme::new(path);
+    if no_cache {
+        theme = theme.skip_cache();
+    }
     change_theme(&theme, templates)?;
     Ok(())
 }
