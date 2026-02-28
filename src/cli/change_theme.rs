@@ -1,5 +1,5 @@
 use crate::config::Template;
-use crate::templates;
+use crate::templates::renderer;
 use crate::theme::Theme;
 use crate::utils::history;
 use anyhow::{Context, Result};
@@ -63,7 +63,7 @@ pub fn change_theme(theme: &Theme, templates: &[Template]) -> Result<()> {
 
     history::save_wallpaper(&theme.wallpaper)?;
 
-    templates::render_templates(theme, templates)?;
+    renderer::render_templates(theme, templates)?;
 
     Ok(())
 }

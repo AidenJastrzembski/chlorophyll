@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod models;
 mod templates;
 mod theme;
 mod utils;
@@ -58,6 +59,8 @@ enum Command {
     ///
     /// Usage: chlorophyll cache <name>
     Cache { name: String },
+    /// Write a template to ~/.config/chlorophyll/templates/<name>
+    Template { name: String },
 }
 
 impl Cli {
@@ -93,6 +96,9 @@ impl Cli {
                 }
                 // generating the palette will cache the results
                 theme.palette()?;
+            }
+            Command::Template { name } => {
+                // impl logic
             }
         }
 
