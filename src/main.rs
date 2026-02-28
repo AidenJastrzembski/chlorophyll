@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod templates;
 mod theme;
 mod utils;
 
@@ -21,10 +22,9 @@ use clap::{Parser, Subcommand};
 // TODO: list command should be a ratatui interactive screen with a searchable list, which
 // displays the name, and a color palette preview
 //
-// TODO: build in some default templates for common tools like waybar and rofi (think like pywal)
-//
-// TODO: build in a templating system which allows users to create templates which will
-// apply theme changes to different tools
+// TODO: instead of the copy paste method right now, it would be cool to have a
+// template command which write the subcommand name-matched template to their templates folder
+// Something like chlorophyll template waybar would write it.
 //
 // TODO: build out custom color-thief implementation
 //
@@ -70,7 +70,7 @@ impl Cli {
                 clear_cache()?;
             }
             Command::Reapply => {
-                reapply_last_wallpaper()?;
+                reapply_last_wallpaper(&config.templates)?;
             }
             Command::List => {
                 list_themes(&config.wallpaper_dir)?;
@@ -78,7 +78,7 @@ impl Cli {
             Command::From { name } => {
                 let path = find_wallpaper(&config.wallpaper_dir, &name)?;
                 let theme = Theme::new(path);
-                change_theme(&theme)?;
+                change_theme(&theme, &config.templates)?;
             }
             Command::Cache { name } => {
                 let path = find_wallpaper(&config.wallpaper_dir, &name)?;

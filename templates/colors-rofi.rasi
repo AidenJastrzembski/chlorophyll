@@ -1,0 +1,33 @@
+/* Chlorophyll — generated rofi colors
+ * Copy to ~/.config/chlorophyll/templates/colors-rofi.rasi
+ * Import from your rofi config:  @import "~/.cache/chlorophyll/colors-rofi.rasi"
+ */
+
+* {
+    cl-color0: {{color0}};
+    cl-color1: {{color1}};
+    cl-color2: {{color2}};
+    cl-color3: {{color3}};
+    cl-color4: {{color4}};
+    cl-color5: {{color5}};
+    cl-color6: {{color6}};
+    cl-color7: {{color7}};
+}
+
+/* usage example:
+ *
+ * window {
+ *     background-color: @cl-color7;
+ *     text-color:       @cl-color0;
+ * }
+ *
+ * element selected {
+ *     background-color: @cl-color0;
+ *     text-color:       @cl-color7;
+ * }
+ *
+ * inputbar {
+ *     background-color: @cl-color6;
+ *     text-color:       @cl-color0;
+ * }
+ */

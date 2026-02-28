@@ -1,9 +1,11 @@
+use crate::config::Template;
+use crate::templates;
 use crate::theme::Theme;
 use crate::utils::history;
 use anyhow::{Context, Result};
 use std::process::{Command, Stdio};
 
-pub fn change_theme(theme: &Theme) -> Result<()> {
+pub fn change_theme(theme: &Theme, templates: &[Template]) -> Result<()> {
     Command::new("pkill").arg("swaybg").status().ok();
     println!("Killed swaybg");
 
@@ -60,6 +62,8 @@ pub fn change_theme(theme: &Theme) -> Result<()> {
         .unwrap();
 
     history::save_wallpaper(&theme.wallpaper)?;
+
+    templates::render_templates(theme, templates)?;
 
     Ok(())
 }

@@ -4,8 +4,16 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Deserialize)]
+pub struct Template {
+    pub name: String,
+    pub reload: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct Config {
     pub wallpaper_dir: String,
+    #[serde(default)] // if the user has no templates, return empty Vec
+    pub templates: Vec<Template>,
 }
 
 impl Config {
@@ -50,6 +58,17 @@ impl Config {
             # Supported formats: png, jpg, jpeg, gif, webp
 
             wallpaper_dir = "{home}/.config/wallpapers"
+
+            # Optional: reload hooks for templates
+            # Place template files in ~/.config/chlorophyll/templates/
+            # Rendered output goes to ~/.cache/chlorophyll/
+            #
+            # [[templates]]
+            # name = "colors-waybar.css"
+            # reload = "killall -SIGUSR2 waybar"
+            #
+            # [[templates]]
+            # name = "colors-rofi.rasi"
             "#
         );
 
@@ -62,6 +81,10 @@ impl Config {
         // write the contents to the file
         fs::write(&config_path, contents).context("Failed to write config file")?;
         println!("Created config at {}", config_path.display());
+
+        // create the templates directory, in the config/chlorophyll dir
+        let templates_dir = config_path.parent().unwrap().join("templates");
+        fs::create_dir_all(&templates_dir).context("Failed to create templates directory")?;
 
         Ok(())
     }
