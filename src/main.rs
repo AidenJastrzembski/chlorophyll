@@ -1,12 +1,12 @@
 mod cli;
 mod config;
-mod models;
 mod templates;
 mod theme;
 mod utils;
 
 use crate::cli::{change_theme, list_themes};
 use crate::config::Config;
+use crate::templates::comptime_templates::{find_comptime_template, list_names};
 use crate::theme::{Theme, find_wallpaper};
 use crate::utils::cache::clear_cache;
 use crate::utils::history::reapply_last_wallpaper;
@@ -97,9 +97,13 @@ impl Cli {
                 // generating the palette will cache the results
                 theme.palette()?;
             }
-            Command::Template { name } => {
-                // impl logic
-            }
+            Command::Template { name } => match find_comptime_template(&name) {
+                Some(comptime_template) => comptime_template.install()?,
+                None => {
+                    let available = list_names().join(", ");
+                    anyhow::bail!("Unknown template '{name}'. Available starters: {available}");
+                }
+            },
         }
 
         Ok(())

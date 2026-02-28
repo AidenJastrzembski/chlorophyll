@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 /// return the path to the templates dir
-fn templates_dir() -> Result<PathBuf> {
+pub fn templates_dir() -> Result<PathBuf> {
     let home = std::env::var("HOME").context("HOME not set")?;
     Ok(PathBuf::from(home).join(".config/chlorophyll/templates"))
 }

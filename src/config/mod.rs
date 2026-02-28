@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Deserialize)]
@@ -85,6 +86,34 @@ impl Config {
         // create the templates directory, in the config/chlorophyll dir
         let templates_dir = config_path.parent().unwrap().join("templates");
         fs::create_dir_all(&templates_dir).context("Failed to create templates directory")?;
+
+        Ok(())
+    }
+
+    /// Append a [[templates]] entry to config.toml as raw text.
+    /// This avoids a deserialize/serialize round-trip that would strip comments.
+    pub fn append_template_entry(name: &str, reload: Option<&str>) -> Result<()> {
+        let config_path = Self::config_path()?;
+        // if no config path return early
+        if !config_path.exists() {
+            bail!("No config file found. Run `chlorophyll init` first.");
+        }
+
+        // open the config file and prepare it to be appended
+        let mut file = fs::OpenOptions::new()
+            .append(true)
+            .open(&config_path)
+            .context("Failed to open config file for appending")?;
+
+        let mut entry = format!("\n[[templates]]\nname = \"{name}\"\n");
+        // if there is a reload command included, add that too
+        if let Some(cmd) = reload {
+            entry.push_str(&format!("reload = \"{cmd}\"\n"));
+        }
+
+        // append the entry to the file
+        file.write_all(entry.as_bytes())
+            .context("Failed to append template entry to config")?;
 
         Ok(())
     }
