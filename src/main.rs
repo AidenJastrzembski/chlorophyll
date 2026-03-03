@@ -4,7 +4,7 @@ mod templates;
 mod theme;
 mod utils;
 
-use crate::cli::{change_theme, list_themes};
+use crate::cli::{change_theme, list_themes, preview_palette};
 use crate::config::Config;
 use crate::templates::comptime_templates::{find_comptime_template, list_names};
 use crate::theme::{Theme, find_wallpaper};
@@ -13,10 +13,10 @@ use crate::utils::history::reapply_last_wallpaper;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-// TODO:  create preview command which displays the palette (and potentially the wallpaper)
-// either in ratatui or using ascii characters
-//
 // TODO: write tests for all commands
+//
+// TODO: extract hard coded 8 from palette into some constant, let user define
+// in their config
 //
 // TODO: list command should be a ratatui interactive screen with a searchable list, which
 // displays the name, and a color palette preview
@@ -49,6 +49,10 @@ enum Command {
     ///
     /// Usage: chlorophyll from <name>
     From { name: String },
+    /// Preview the extracted color palette for a wallpaper
+    ///
+    /// Usage: chlorophyll preview <name>
+    Preview { name: String },
     /// Generate the cache for a wallpaper in your wallpapers directory
     /// without applying it
     ///
@@ -58,39 +62,16 @@ enum Command {
     Template { name: String },
 }
 
+// TODO: could be worth extracting this to cli/mod.rs or somethin
 impl Cli {
     fn run(self) -> Result<()> {
-        let config = Config::load()?;
-
         match self.command {
+            // Commands that dont require the config to be loaded
             Command::Init => {
                 Config::init()?;
             }
             Command::Clear => {
                 clear_cache()?;
-            }
-            Command::Reapply => {
-                reapply_last_wallpaper(&config.templates, self.no_cache)?;
-            }
-            Command::List => {
-                list_themes(&config.wallpaper_dir)?;
-            }
-            Command::From { name } => {
-                let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                let mut theme = Theme::new(path);
-                if self.no_cache {
-                    theme = theme.skip_cache();
-                }
-                change_theme(&theme, &config.templates)?;
-            }
-            Command::Cache { name } => {
-                let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                let mut theme = Theme::new(path);
-                if self.no_cache {
-                    theme = theme.skip_cache();
-                }
-                // generating the palette will cache the results
-                theme.palette()?;
             }
             Command::Template { name } => match find_comptime_template(&name) {
                 Some(comptime_template) => comptime_template.install()?,
@@ -99,6 +80,45 @@ impl Cli {
                     anyhow::bail!("Unknown template '{name}'. Available starters: {available}");
                 }
             },
+            // Commands that do require the config to be loaded
+            command => {
+                let config = Config::load()?;
+                match command {
+                    Command::Reapply => {
+                        reapply_last_wallpaper(&config.templates, self.no_cache)?;
+                    }
+                    Command::List => {
+                        list_themes(&config.wallpaper_dir)?;
+                    }
+                    Command::From { name } => {
+                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
+                        let mut theme = Theme::new(path);
+                        if self.no_cache {
+                            theme = theme.skip_cache();
+                        }
+                        change_theme(&theme, &config.templates)?;
+                    }
+                    Command::Preview { name } => {
+                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
+                        let mut theme = Theme::new(path);
+                        if self.no_cache {
+                            theme = theme.skip_cache();
+                        }
+                        let palette = theme.palette()?;
+                        preview_palette(&palette, &name)?;
+                    }
+                    Command::Cache { name } => {
+                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
+                        let mut theme = Theme::new(path);
+                        if self.no_cache {
+                            theme = theme.skip_cache();
+                        }
+                        // generating the palette will cache the results
+                        theme.palette()?;
+                    }
+                    Command::Init | Command::Clear | Command::Template { .. } => unreachable!(),
+                }
+            }
         }
 
         Ok(())
