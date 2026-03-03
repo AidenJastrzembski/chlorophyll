@@ -65,8 +65,7 @@ fn draw(frame: &mut Frame, palette: &[(u8, u8, u8)], name: &str) {
     frame.render_widget(title, title_area);
 
     // main area which displays the swatches for each color in the palette
-    let count = palette.len().min(8) as u32;
-    let constraints: Vec<Constraint> = (0..count).map(|_| Constraint::Ratio(1, count)).collect();
+    let constraints: Vec<Constraint> = (0..8).map(|_| Constraint::Ratio(1, 8)).collect();
     let columns = Layout::horizontal(&constraints).split(main_area);
 
     for (i, &(r, g, b)) in palette.iter().take(8).enumerate() {
