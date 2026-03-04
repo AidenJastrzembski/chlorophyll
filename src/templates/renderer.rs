@@ -1,5 +1,6 @@
 use crate::config::Template;
 use crate::theme::Theme;
+use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
@@ -18,29 +19,27 @@ fn output_dir() -> Result<PathBuf> {
     Ok(PathBuf::from(home).join(".cache/chlorophyll"))
 }
 
-/// TODO: extract some 'rgb' tuple for this use case
-///
 /// build vars hashmap with different color formats for different tools
-fn build_variables(palette: &[(u8, u8, u8)], wallpaper_path: &str) -> HashMap<String, String> {
+fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
     // enumerate gives the current index as well as the element
-    for (i, &(r, g, b)) in palette.iter().enumerate() {
+    for (i, c) in palette.iter().enumerate() {
         let prefix = format!("color{i}");
 
         // Base css/gtk hex code
-        vars.insert(prefix.clone(), format!("#{r:02x}{g:02x}{b:02x}"));
+        vars.insert(prefix.clone(), c.hex());
         // Some tools want hex but without the #
-        vars.insert(format!("{prefix}.strip"), format!("{r:02x}{g:02x}{b:02x}"));
+        vars.insert(format!("{prefix}.strip"), format!("{:02x}{:02x}{:02x}", c.0, c.1, c.2));
         // CSS rgb values
-        vars.insert(format!("{prefix}.rgb"), format!("{r},{g},{b}"));
+        vars.insert(format!("{prefix}.rgb"), format!("{},{},{}", c.0, c.1, c.2));
         // float based channels for tools like sway which want 0-1
-        vars.insert(format!("{prefix}.red"), format!("{:.4}", r as f64 / 255.0));
+        vars.insert(format!("{prefix}.red"), format!("{:.4}", c.0 as f64 / 255.0));
         vars.insert(
             format!("{prefix}.green"),
-            format!("{:.4}", g as f64 / 255.0),
+            format!("{:.4}", c.1 as f64 / 255.0),
         );
-        vars.insert(format!("{prefix}.blue"), format!("{:.4}", b as f64 / 255.0));
+        vars.insert(format!("{prefix}.blue"), format!("{:.4}", c.2 as f64 / 255.0));
     }
 
     // TODO: I assume this will require some tweaking. Once I write my own implementation

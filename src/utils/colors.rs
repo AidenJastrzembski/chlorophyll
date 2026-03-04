@@ -1,3 +1,4 @@
+use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
 use color_thief::{ColorFormat, get_palette};
 use image::ImageReader;
@@ -5,7 +6,7 @@ use std::path::Path;
 
 /// Returns all 8 palette colors sorted by vibrancy score (highest first).
 /// Uses HSL-based scoring: s^3 * (1 - |l - 0.5| * 2)
-pub fn scored_palette(path: &Path) -> Result<Vec<(u8, u8, u8)>> {
+pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
     let img = ImageReader::open(path)
         .context("Failed to open image")?
         .decode()
@@ -25,7 +26,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<(u8, u8, u8)>> {
     //
     // s is cubed because we want to favor colors that are more saturated,
     // then we multiply by 1 - |l - 0.5| * 2 to favor colors that are closer to 0.5 lightness
-    let mut scored: Vec<(f64, (u8, u8, u8))> = palette
+    let mut scored: Vec<(f64, Rgb)> = palette
         .iter()
         .map(|color| {
             let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
@@ -37,7 +38,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<(u8, u8, u8)>> {
                 s.powi(3) * (1.0 - (l - 0.5).abs() * 2.0)
             };
 
-            (score, (color.r, color.g, color.b))
+            (score, Rgb(color.r, color.g, color.b))
         })
         .collect();
 
@@ -52,7 +53,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<(u8, u8, u8)>> {
             .map(|color| {
                 let (_, s, l) = rgb_to_hsl(color.r as f64, color.g as f64, color.b as f64);
                 let score = if (0.1..0.9).contains(&l) { s } else { -1.0 };
-                (score, (color.r, color.g, color.b))
+                (score, Rgb(color.r, color.g, color.b))
             })
             .collect();
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());

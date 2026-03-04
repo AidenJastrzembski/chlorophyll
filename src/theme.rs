@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::utils::{cache, colors};
+use crate::utils::{cache, colors, rgb::Rgb};
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp"];
 const ANIMATED_EXTENSIONS: &[&str] = &["gif", "webp", "apng"];
@@ -56,7 +56,7 @@ impl Theme {
     }
 
     /// check cache, compute if miss, return scored palette (highest score first)
-    pub fn palette(&self) -> Result<Vec<(u8, u8, u8)>> {
+    pub fn palette(&self) -> Result<Vec<Rgb>> {
         let hash = self.hash()?;
 
         if !self.use_cache {
@@ -75,8 +75,8 @@ impl Theme {
     /// dx helper fn: palette()[0] formatted as "0xRRGGBB"
     pub fn dominant_color(&self) -> Result<String> {
         let palette = self.palette()?;
-        let (r, g, b) = palette[0];
-        Ok(format!("0x{r:02x}{g:02x}{b:02x}"))
+        let c = palette[0];
+        Ok(format!("0x{}", c.hex().trim_start_matches('#')))
     }
 }
 

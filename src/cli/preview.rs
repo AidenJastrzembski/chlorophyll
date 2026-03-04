@@ -1,3 +1,4 @@
+use crate::utils::rgb::Rgb;
 use anyhow::{Ok, Result};
 use ratatui::{
     Frame,
@@ -10,7 +11,7 @@ use ratatui::{
 
 /// Display the color palette to the user of the wallpaper that they
 /// provide
-pub fn preview_palette(palette: &[(u8, u8, u8)], name: &str) -> Result<()> {
+pub fn preview_palette(palette: &[Rgb], name: &str) -> Result<()> {
     // refs used:
     // https://ratatui.rs/tutorials/counter-app/basic-app/
     // we can optionally pull this terminal value which is a crossterm type
@@ -47,7 +48,7 @@ pub fn preview_palette(palette: &[(u8, u8, u8)], name: &str) -> Result<()> {
 /// iterate the palette and draw each one to screen. Ratatui comes
 /// with these layouts, which ship areas to bind components to.
 /// https://ratatui.rs/concepts/layout/
-fn draw(frame: &mut Frame, palette: &[(u8, u8, u8)], name: &str) {
+fn draw(frame: &mut Frame, palette: &[Rgb], name: &str) {
     let [title_area, main_area, footer_area] = Layout::vertical([
         Constraint::Length(2),
         Constraint::Fill(1),
@@ -68,12 +69,10 @@ fn draw(frame: &mut Frame, palette: &[(u8, u8, u8)], name: &str) {
     let constraints: Vec<Constraint> = (0..8).map(|_| Constraint::Ratio(1, 8)).collect();
     let columns = Layout::horizontal(&constraints).split(main_area);
 
-    for (i, &(r, g, b)) in palette.iter().take(8).enumerate() {
-        let bg = Color::Rgb(r, g, b);
+    for (i, c) in palette.iter().take(8).enumerate() {
+        let bg = Color::Rgb(c.0, c.1, c.2);
 
-        // format color to hex for display
-        // TODO: also its getting annoying writing this format a ton -- extract to helper
-        let hex = format!("#{:02x}{:02x}{:02x}", r, g, b);
+        let hex = c.hex();
         // very similar naming conventions as web.
         // paragraph => <p>
         // the style part is like css styles and you tack on
