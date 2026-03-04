@@ -17,11 +17,8 @@ pub fn load_cache(hash: &str) -> Result<Option<Vec<Rgb>>> {
         return Ok(None);
     }
     let data = fs::read_to_string(&path).context("Failed to read cache file")?;
-    let tuples: Vec<[u8; 3]> = serde_json::from_str(&data).context("Failed to parse cache file")?;
-    // collect all tuples into a vec and return
-    Ok(Some(
-        tuples.into_iter().map(|[r, g, b]| Rgb(r, g, b)).collect(),
-    ))
+    let palette: Vec<Rgb> = serde_json::from_str(&data).context("Failed to parse cache file")?;
+    Ok(Some(palette))
 }
 
 /// saves the cache for the given hash
@@ -30,10 +27,7 @@ pub fn save_cache(hash: &str, palette: &[Rgb]) -> Result<()> {
     // create the cache dir if it doesnt exist
     fs::create_dir_all(&dir).context("Failed to create cache dir")?;
 
-    // collect all tuples into a vec
-    let tuples: Vec<[u8; 3]> = palette.iter().map(|c| [c.0, c.1, c.2]).collect();
-    // convert vec to json for caching
-    let data = serde_json::to_string(&tuples)?;
+    let data = serde_json::to_string(&palette)?;
     fs::write(dir.join(format!("{hash}.json")), data).context("Failed to write cache file")?;
     Ok(())
 }
