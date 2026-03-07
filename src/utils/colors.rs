@@ -1,8 +1,10 @@
+use crate::utils::quantize;
 use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
-use color_thief::{ColorFormat, get_palette};
 use image::ImageReader;
 use std::path::Path;
+
+const PALETTE_SIZE: usize = 8;
 
 /// Returns all 8 palette colors sorted by vibrancy score (highest first).
 /// Uses HSL-based scoring: s^3 * (1 - |l - 0.5| * 2)
@@ -16,10 +18,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
     let thumb = img.thumbnail(128, 128).to_rgb8();
     let pixels = thumb.as_raw();
 
-    // quality 1 = thorough, 10 = fast; 5 is a good balance
-    // max_colors = 8 creates a color pallete with enough colors for a nice selection
-    let palette = get_palette(pixels, ColorFormat::Rgb, 8, 8)
-        .map_err(|e| anyhow::anyhow!("color_thief failed: {:?}", e))?;
+    let palette = quantize::quantize(pixels, PALETTE_SIZE);
 
     // Score each color by vibrancy
     // the equation is s^3 * (1 - |l - 0.5| * 2)
@@ -28,8 +27,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
     // then we multiply by 1 - |l - 0.5| * 2 to favor colors that are closer to 0.5 lightness
     let mut scored: Vec<(f64, Rgb)> = palette
         .iter()
-        .map(|color| {
-            let rgb = Rgb(color.r, color.g, color.b);
+        .map(|&rgb| {
             let (_, s, l) = rgb.hsl();
 
             let score = if !(0.15..=0.85).contains(&l) || s < 0.25 {
@@ -51,8 +49,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
     if scored[0].0 < 0.0 {
         scored = palette
             .iter()
-            .map(|color| {
-                let rgb = Rgb(color.r, color.g, color.b);
+            .map(|&rgb| {
                 let (_, s, l) = rgb.hsl();
                 let score = if (0.1..0.9).contains(&l) { s } else { -1.0 };
                 (score, rgb)
