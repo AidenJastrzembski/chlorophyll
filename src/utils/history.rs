@@ -1,5 +1,5 @@
 use crate::cli::change_theme;
-use crate::config::Template;
+use crate::config::Config;
 use crate::theme::Theme;
 use anyhow::{Context, Result, bail};
 use std::fs;
@@ -31,12 +31,12 @@ fn load_wallpaper() -> Result<PathBuf> {
     Ok(PathBuf::from(data.trim()))
 }
 
-pub fn reapply_last_wallpaper(templates: &[Template], no_cache: bool) -> Result<()> {
+pub fn reapply_last_wallpaper(config: &Config, no_cache: bool) -> Result<()> {
     let path = load_wallpaper()?;
     let mut theme = Theme::new(path);
     if no_cache {
         theme = theme.skip_cache();
     }
-    change_theme(&theme, templates)?;
+    change_theme(&theme, config)?;
     Ok(())
 }

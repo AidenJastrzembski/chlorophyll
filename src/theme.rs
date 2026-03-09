@@ -72,12 +72,6 @@ impl Theme {
         Ok(palette)
     }
 
-    /// dx helper fn: palette()[0] formatted as "0xRRGGBB"
-    pub fn dominant_color(&self) -> Result<String> {
-        let palette = self.palette()?;
-        let c = palette[0];
-        Ok(format!("0x{}", c.hex().trim_start_matches('#')))
-    }
 }
 
 /// Try to find the name as a file on the system. if found, return the path as a PathBuf

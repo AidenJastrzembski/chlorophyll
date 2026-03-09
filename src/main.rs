@@ -83,7 +83,7 @@ impl Cli {
                 let config = Config::load()?;
                 match command {
                     Command::Reapply => {
-                        reapply_last_wallpaper(&config.templates, self.no_cache)?;
+                        reapply_last_wallpaper(&config, self.no_cache)?;
                     }
                     Command::List => {
                         list_themes(&config.wallpaper_dir)?;
@@ -94,7 +94,7 @@ impl Cli {
                         if self.no_cache {
                             theme = theme.skip_cache();
                         }
-                        change_theme(&theme, &config.templates)?;
+                        change_theme(&theme, &config)?;
                     }
                     Command::Preview { name } => {
                         let path = find_wallpaper(&config.wallpaper_dir, &name)?;

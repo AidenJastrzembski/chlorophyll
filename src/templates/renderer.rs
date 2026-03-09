@@ -20,7 +20,7 @@ fn output_dir() -> Result<PathBuf> {
 }
 
 /// build vars hashmap with different color formats for different tools
-fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
+pub fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
     // enumerate gives the current index as well as the element
@@ -56,7 +56,7 @@ fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, Str
 ///
 /// Used {{ }} to avoid having to deal with the single brackets that
 /// both css and json use.
-fn substitute(input: &str, vars: &HashMap<String, String>) -> String {
+pub fn substitute(input: &str, vars: &HashMap<String, String>) -> String {
     // with capacity reduces the amount of allocations you have to do
     // by initializing the string with a set capacity by default. useful
     // for when you are doing a ton of pushes to the string (like here)

@@ -11,10 +11,22 @@ pub struct Template {
 }
 
 #[derive(Deserialize)]
+pub struct Hook {
+    pub command: String,
+}
+
+#[derive(Deserialize)]
 pub struct Config {
     pub wallpaper_dir: String,
-    #[serde(default)] // if the user has no templates, return empty Vec
+    pub wallpaper_command: Option<String>,
+    pub wallpaper_kill: Option<String>,
+    #[serde(default)]
     pub templates: Vec<Template>,
+    /// post-theme-change hooks. can use {{color0}}, {{wallpaper}}, etc.
+    /// i.e. setting border colors on your window manager, or wallpaper for your
+    /// lock screen
+    #[serde(default)]
+    pub hooks: Vec<Hook>,
 }
 
 impl Config {
@@ -59,6 +71,18 @@ impl Config {
             # Supported formats: png, jpg, jpeg, gif, webp
 
             wallpaper_dir = "{home}/.config/wallpapers"
+
+            # Command to set the wallpaper. {{{{wallpaper}}}} is replaced with the path.
+            # wallpaper_command = "swaybg -i {{{{wallpaper}}}}"
+
+            # Optional: kill the previous wallpaper daemon before spawning a new one
+            # wallpaper_kill = "pkill swaybg"
+
+            # Optional: commands to run after the theme is applied.
+            # Uses the same variables as templates: {{{{color0}}}}, {{{{color0.strip}}}}, etc.
+            #
+            # [[hooks]]
+            # command = "riverctl border-color-focused {{{{color0.strip}}}}"
 
             # Optional: reload hooks for templates
             # Place template files in ~/.config/chlorophyll/templates/
