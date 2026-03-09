@@ -44,7 +44,7 @@ pub fn change_theme(theme: &Theme, config: &Config) -> Result<()> {
 
     // run post-theme-change hooks with full template vars (colors + wallpaper)
     if !config.hooks.is_empty() {
-        let palette = theme.palette()?;
+        let palette = theme.palette(config.palette_size)?;
         let vars = renderer::build_variables(&palette, &wallpaper_str);
 
         for hook in &config.hooks {
@@ -58,7 +58,7 @@ pub fn change_theme(theme: &Theme, config: &Config) -> Result<()> {
 
     history::save_wallpaper(&theme.wallpaper)?;
 
-    renderer::render_templates(theme, &config.templates)?;
+    renderer::render_templates(theme, &config.templates, config.palette_size)?;
 
     Ok(())
 }

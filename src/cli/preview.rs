@@ -66,10 +66,15 @@ fn draw(frame: &mut Frame, palette: &[Rgb], name: &str) {
     frame.render_widget(title, title_area);
 
     // main area which displays the swatches for each color in the palette
-    let constraints: Vec<Constraint> = (0..8).map(|_| Constraint::Ratio(1, 8)).collect();
+    // define a vector of constraints for the layout. each constraint is a ratio of 1 / palette.len.
+    let constraints: Vec<Constraint> =
+        vec![Constraint::Ratio(1, palette.len().try_into().unwrap()); palette.len()];
+
+    // create a horizontal layout and split the main area into columns
+    // using these constraints.
     let columns = Layout::horizontal(&constraints).split(main_area);
 
-    for (i, c) in palette.iter().take(8).enumerate() {
+    for (i, c) in palette.iter().enumerate() {
         let bg = Color::Rgb(c.0, c.1, c.2);
 
         let hex = c.hex();

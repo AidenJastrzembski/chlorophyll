@@ -139,7 +139,7 @@ fn run_reload(command: &str, template_name: &str) {
 }
 
 /// render all templates in the templates dir
-pub fn render_templates(theme: &Theme, templates: &[Template]) -> Result<()> {
+pub fn render_templates(theme: &Theme, templates: &[Template], palette_size: usize) -> Result<()> {
     // grab the templates dir
     let templates_dir = templates_dir()?;
     if !templates_dir.exists() {
@@ -166,7 +166,7 @@ pub fn render_templates(theme: &Theme, templates: &[Template]) -> Result<()> {
     }
 
     // generate the palette
-    let palette = theme.palette()?;
+    let palette = theme.palette(palette_size)?;
     let wallpaper_str = theme.wallpaper.to_string_lossy().to_string();
     // generate the vars
     let vars = build_variables(&palette, &wallpaper_str);

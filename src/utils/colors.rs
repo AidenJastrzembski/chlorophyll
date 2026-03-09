@@ -4,11 +4,9 @@ use anyhow::{Context, Result};
 use image::ImageReader;
 use std::path::Path;
 
-const PALETTE_SIZE: usize = 8;
-
-/// Returns all 8 palette colors sorted by vibrancy score (highest first).
+/// Returns palette colors sorted by vibrancy score (highest first).
 /// Uses HSL-based scoring: s^3 * (1 - |l - 0.5| * 2)
-pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
+pub fn scored_palette(path: &Path, palette_size: usize) -> Result<Vec<Rgb>> {
     let img = ImageReader::open(path)
         .context("Failed to open image")?
         .decode()
@@ -18,7 +16,7 @@ pub fn scored_palette(path: &Path) -> Result<Vec<Rgb>> {
     let thumb = img.thumbnail(128, 128).to_rgb8();
     let pixels = thumb.as_raw();
 
-    let palette = quantize::quantize(pixels, PALETTE_SIZE);
+    let palette = quantize::quantize(pixels, palette_size);
 
     // Score each color by vibrancy
     // the equation is s^3 * (1 - |l - 0.5| * 2)

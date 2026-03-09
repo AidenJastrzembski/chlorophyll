@@ -20,6 +20,9 @@ pub struct Config {
     pub wallpaper_dir: String,
     pub wallpaper_command: Option<String>,
     pub wallpaper_kill: Option<String>,
+    /// number of colors to extract from the wallpaper
+    #[serde(default = "default_palette_size")]
+    pub palette_size: usize,
     #[serde(default)]
     pub templates: Vec<Template>,
     /// post-theme-change hooks. can use {{color0}}, {{wallpaper}}, etc.
@@ -27,6 +30,11 @@ pub struct Config {
     /// lock screen
     #[serde(default)]
     pub hooks: Vec<Hook>,
+}
+
+// https://serde.rs/attr-default.html
+fn default_palette_size() -> usize {
+    8
 }
 
 impl Config {
@@ -77,6 +85,9 @@ impl Config {
 
             # Optional: kill the previous wallpaper daemon before spawning a new one
             # wallpaper_kill = "pkill swaybg"
+
+            # Number of colors to extract from the wallpaper (default: 8)
+            # palette_size = 8
 
             # Optional: commands to run after the theme is applied.
             # Uses the same variables as templates: {{{{color0}}}}, {{{{color0.strip}}}}, etc.

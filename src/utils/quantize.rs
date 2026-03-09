@@ -1,11 +1,5 @@
 use crate::utils::rgb::Rgb;
 
-// NOTE: This is kind of a stupid-ish implementation of a color palette generator
-// TODO: a more complex implementation in the future, perhaps one that doesnt just split the
-// image into boxes by pixel count, since i can imagine a lopsided image might not get its colors
-// represented by this method
-// TODO: look into kmeans since that keeps getting thrown around
-
 /// a bounding box in the pixel set.
 /// the axis with the most variance is split next
 struct ColorBox {

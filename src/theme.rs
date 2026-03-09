@@ -37,8 +37,8 @@ impl Theme {
         ANIMATED_EXTENSIONS.contains(&ext.to_lowercase().as_str())
     }
 
-    /// sha256 of wallpaper_path + ":" + file_contents
-    pub fn hash(&self) -> Result<String> {
+    /// sha256 of wallpaper_path + ":" + palette_size + ":" + file_contents
+    pub fn hash(&self, palette_size: usize) -> Result<String> {
         // read the wallpaper file into a vec of u8 (a buffer)
         // NOTE: if large files slow system down or use too much mem (doubt),
         // use a 65535 byte buffer (64k bytes)
@@ -47,7 +47,9 @@ impl Theme {
         let mut hasher = Sha256::new();
         // update the hasher with the path
         hasher.update(self.wallpaper.to_string_lossy().as_bytes());
-        // add the separator
+        // add the separator and palette size so cache invalidates when it changes
+        hasher.update(b":");
+        hasher.update(palette_size.to_string().as_bytes());
         hasher.update(b":");
         // add the buffer
         hasher.update(&contents);
@@ -56,18 +58,18 @@ impl Theme {
     }
 
     /// check cache, compute if miss, return scored palette (highest score first)
-    pub fn palette(&self) -> Result<Vec<Rgb>> {
-        let hash = self.hash()?;
+    pub fn palette(&self, palette_size: usize) -> Result<Vec<Rgb>> {
+        let hash = self.hash(palette_size)?;
 
         if !self.use_cache {
-            return colors::scored_palette(&self.wallpaper);
+            return colors::scored_palette(&self.wallpaper, palette_size);
         }
 
         if let Some(cached) = cache::load_cache(&hash)? {
             return Ok(cached);
         }
 
-        let palette = colors::scored_palette(&self.wallpaper)?;
+        let palette = colors::scored_palette(&self.wallpaper, palette_size)?;
         cache::save_cache(&hash, &palette)?;
         Ok(palette)
     }
