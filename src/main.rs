@@ -8,6 +8,7 @@ use crate::cli::{change_theme, list_themes, preview_palette};
 use crate::config::Config;
 use crate::templates::comptime_templates::{find_comptime_template, list_names};
 use crate::theme::{Theme, find_wallpaper};
+use crate::utils::colors;
 use crate::utils::cache::clear_cache;
 use crate::utils::history::reapply_last_wallpaper;
 use anyhow::Result;
@@ -101,7 +102,8 @@ impl Cli {
                             theme = theme.skip_cache();
                         }
                         let palette = theme.palette(config.palette_size)?;
-                        preview_palette(&palette, &name)?;
+                        let labels = colors::assign_labels(&palette);
+                        preview_palette(&palette, &name, &labels)?;
                     }
                     Command::Cache { name } => {
                         let path = find_wallpaper(&config.wallpaper_dir, &name)?;

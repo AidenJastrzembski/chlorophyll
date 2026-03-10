@@ -1,3 +1,4 @@
+use crate::utils::colors::LabeledColors;
 use crate::utils::rgb::Rgb;
 use anyhow::{Ok, Result};
 use ratatui::{
@@ -11,7 +12,7 @@ use ratatui::{
 
 /// Display the color palette to the user of the wallpaper that they
 /// provide
-pub fn preview_palette(palette: &[Rgb], name: &str) -> Result<()> {
+pub fn preview_palette(palette: &[Rgb], name: &str, labels: &LabeledColors) -> Result<()> {
     // refs used:
     // https://ratatui.rs/tutorials/counter-app/basic-app/
     // we can optionally pull this terminal value which is a crossterm type
@@ -22,7 +23,7 @@ pub fn preview_palette(palette: &[Rgb], name: &str) -> Result<()> {
     // TODO: refactor to struct / impl setup as seen in link above
     ratatui::run(|terminal| {
         loop {
-            terminal.draw(|frame| draw(frame, palette, name))?;
+            terminal.draw(|frame| draw(frame, palette, name, labels))?;
 
             // one thing to note is that unlike video games, tuis are 'event' based
             // so while my traditional understanding of graphics from video games is just
@@ -48,7 +49,7 @@ pub fn preview_palette(palette: &[Rgb], name: &str) -> Result<()> {
 /// iterate the palette and draw each one to screen. Ratatui comes
 /// with these layouts, which ship areas to bind components to.
 /// https://ratatui.rs/concepts/layout/
-fn draw(frame: &mut Frame, palette: &[Rgb], name: &str) {
+fn draw(frame: &mut Frame, palette: &[Rgb], name: &str, labels: &LabeledColors) {
     let [title_area, main_area, footer_area] = Layout::vertical([
         Constraint::Length(2),
         Constraint::Fill(1),
@@ -86,13 +87,24 @@ fn draw(frame: &mut Frame, palette: &[Rgb], name: &str) {
         for (col_idx, c) in row_colors.iter().enumerate() {
             let bg = Color::Rgb(c.0, c.1, c.2);
             let hex = c.hex();
+            let label = labels.label_for(c);
 
             // vertically center the hex label within the swatch
-            let padding = (row_height.saturating_sub(1)) / 2;
+            let content_lines: u16 = if label.is_some() { 2 } else { 1 };
+            let padding = (row_height.saturating_sub(content_lines)) / 2;
             let mut lines: Vec<Line> = vec![Line::from(""); padding as usize];
             lines.push(
                 Line::from(Span::styled(hex, Style::default().fg(Color::Black).bg(bg))).centered(),
             );
+            if let Some(name) = label {
+                lines.push(
+                    Line::from(Span::styled(
+                        format!("[{}]", name),
+                        Style::default().fg(Color::DarkGray).bg(bg),
+                    ))
+                    .centered(),
+                );
+            }
 
             let swatch = Paragraph::new(lines)
                 .style(Style::default().bg(bg))

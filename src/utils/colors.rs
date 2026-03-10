@@ -67,15 +67,43 @@ pub struct LabeledColors {
     pub secondary: Rgb,
 }
 
+// very much not rust idiomatic but ill fix that another time
+impl LabeledColors {
+    /// Returns the label name for a color if it matches a labeled color.
+    /// Checks in priority order: primary, secondary, background, foreground.
+    pub fn label_for(&self, color: &Rgb) -> Option<&'static str> {
+        if color == &self.primary {
+            Some("primary")
+        } else if color == &self.secondary {
+            Some("secondary")
+        } else if color == &self.background {
+            Some("bg")
+        } else if color == &self.foreground {
+            Some("fg")
+        } else {
+            None
+        }
+    }
+}
+
 // assign the actual named labels to the palette
 pub fn assign_labels(palette: &[Rgb]) -> LabeledColors {
     let primary = palette[0];
-    // TODO: make sure this is a different hue than the primary color
-    let secondary = if palette.len() > 1 {
-        palette[1]
-    } else {
-        palette[0]
-    };
+    let (primary_h, _, _) = primary.hsl();
+
+    // pick the first palette color with a sufficiently different hue from primary
+    let secondary = palette
+        .iter()
+        .skip(1)
+        .find(|c| {
+            let (h, _, _) = c.hsl();
+            let diff = (h - primary_h).abs();
+            // hue wraps around at 1.0, so take the shorter arc
+            let hue_dist = diff.min(1.0 - diff);
+            hue_dist > 0.05
+        })
+        .copied()
+        .unwrap_or(palette[if palette.len() > 1 { 1 } else { 0 }]);
 
     // score each color for background
     let mut background = (f64::NEG_INFINITY, palette[0]);
