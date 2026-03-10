@@ -66,29 +66,40 @@ fn draw(frame: &mut Frame, palette: &[Rgb], name: &str) {
     frame.render_widget(title, title_area);
 
     // main area which displays the swatches for each color in the palette
-    // define a vector of constraints for the layout. each constraint is a ratio of 1 / palette.len.
-    let constraints: Vec<Constraint> =
-        vec![Constraint::Ratio(1, palette.len().try_into().unwrap()); palette.len()];
+    // split into rows of 8 with square-ish cells
+    let cols_per_row = 8usize;
+    let rows: Vec<&[Rgb]> = palette.chunks(cols_per_row).collect();
+    let num_rows = rows.len();
 
-    // create a horizontal layout and split the main area into columns
-    // using these constraints.
-    let columns = Layout::horizontal(&constraints).split(main_area);
+    // terminal chars are ~2:1 height:width, so row height = col_width / 2 for squares
+    let col_width = main_area.width as usize / cols_per_row;
+    let row_height = (col_width / 2).max(1) as u16;
 
-    for (i, c) in palette.iter().enumerate() {
-        let bg = Color::Rgb(c.0, c.1, c.2);
+    let row_constraints: Vec<Constraint> = vec![Constraint::Length(row_height); num_rows];
+    let row_areas = Layout::vertical(&row_constraints).split(main_area);
 
-        let hex = c.hex();
-        // very similar naming conventions as web.
-        // paragraph => <p>
-        // the style part is like css styles and you tack on
-        // methods to tack on new styles
-        let swatch = Paragraph::new(
-            Line::from(Span::styled(hex, Style::default().fg(Color::Black).bg(bg))).centered(),
-        )
-        .style(Style::default().bg(bg))
-        .block(Block::default());
+    for (row_idx, row_colors) in rows.iter().enumerate() {
+        let col_constraints: Vec<Constraint> =
+            vec![Constraint::Ratio(1, cols_per_row as u32); row_colors.len()];
+        let col_areas = Layout::horizontal(&col_constraints).split(row_areas[row_idx]);
 
-        frame.render_widget(swatch, columns[i]);
+        for (col_idx, c) in row_colors.iter().enumerate() {
+            let bg = Color::Rgb(c.0, c.1, c.2);
+            let hex = c.hex();
+
+            // vertically center the hex label within the swatch
+            let padding = (row_height.saturating_sub(1)) / 2;
+            let mut lines: Vec<Line> = vec![Line::from(""); padding as usize];
+            lines.push(
+                Line::from(Span::styled(hex, Style::default().fg(Color::Black).bg(bg))).centered(),
+            );
+
+            let swatch = Paragraph::new(lines)
+                .style(Style::default().bg(bg))
+                .block(Block::default());
+
+            frame.render_widget(swatch, col_areas[col_idx]);
+        }
     }
 
     // footer with information on how to leave the view (vim could never)

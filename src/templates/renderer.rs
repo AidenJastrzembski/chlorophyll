@@ -1,5 +1,6 @@
 use crate::config::Template;
 use crate::theme::Theme;
+use crate::utils::colors;
 use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -19,33 +20,46 @@ fn output_dir() -> Result<PathBuf> {
     Ok(PathBuf::from(home).join(".cache/chlorophyll"))
 }
 
+/// make all color format variants for a given prefix (hex, strip, rgb, red, green, blue).
+fn insert_color_vars(vars: &mut HashMap<String, String>, prefix: &str, c: &Rgb) {
+    // Base css/gtk hex code
+    vars.insert(prefix.to_string(), c.hex());
+    // Some tools want hex but without the #
+    vars.insert(
+        format!("{prefix}.strip"),
+        format!("{:02x}{:02x}{:02x}", c.0, c.1, c.2),
+    );
+    // CSS rgb values
+    vars.insert(format!("{prefix}.rgb"), format!("{},{},{}", c.0, c.1, c.2));
+    // float based channels for tools like sway which want 0-1
+    vars.insert(
+        format!("{prefix}.red"),
+        format!("{:.4}", c.0 as f64 / 255.0),
+    );
+    vars.insert(
+        format!("{prefix}.green"),
+        format!("{:.4}", c.1 as f64 / 255.0),
+    );
+    vars.insert(
+        format!("{prefix}.blue"),
+        format!("{:.4}", c.2 as f64 / 255.0),
+    );
+}
+
 /// build vars hashmap with different color formats for different tools
 pub fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
-    // enumerate gives the current index as well as the element
     for (i, c) in palette.iter().enumerate() {
-        let prefix = format!("color{i}");
-
-        // Base css/gtk hex code
-        vars.insert(prefix.clone(), c.hex());
-        // Some tools want hex but without the #
-        vars.insert(format!("{prefix}.strip"), format!("{:02x}{:02x}{:02x}", c.0, c.1, c.2));
-        // CSS rgb values
-        vars.insert(format!("{prefix}.rgb"), format!("{},{},{}", c.0, c.1, c.2));
-        // float based channels for tools like sway which want 0-1
-        vars.insert(format!("{prefix}.red"), format!("{:.4}", c.0 as f64 / 255.0));
-        vars.insert(
-            format!("{prefix}.green"),
-            format!("{:.4}", c.1 as f64 / 255.0),
-        );
-        vars.insert(format!("{prefix}.blue"), format!("{:.4}", c.2 as f64 / 255.0));
+        insert_color_vars(&mut vars, &format!("color{i}"), c);
     }
 
-    // TODO: I assume this will require some tweaking. Once I write my own implementation
-    // of color thief I can apply labels to the colors there. i.e. a 'foreground' color
-    // (currently color0)
-    // will probably want to be the color who is lightest without much saturation.
+    // semantic labels derived from the palette
+    let labels = colors::assign_labels(palette);
+    insert_color_vars(&mut vars, "background", &labels.background);
+    insert_color_vars(&mut vars, "foreground", &labels.foreground);
+    insert_color_vars(&mut vars, "primary", &labels.primary);
+    insert_color_vars(&mut vars, "secondary", &labels.secondary);
 
     // insert the wallpaper as a var for tools like lock screens
     vars.insert("wallpaper".to_string(), wallpaper_path.to_string());

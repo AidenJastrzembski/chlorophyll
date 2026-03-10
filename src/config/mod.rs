@@ -34,7 +34,7 @@ pub struct Config {
 
 // https://serde.rs/attr-default.html
 fn default_palette_size() -> usize {
-    8
+    16
 }
 
 impl Config {
@@ -86,11 +86,15 @@ impl Config {
             # Optional: kill the previous wallpaper daemon before spawning a new one
             # wallpaper_kill = "pkill swaybg"
 
-            # Number of colors to extract from the wallpaper (default: 8)
-            # palette_size = 8
+            # Number of colors to extract from the wallpaper
+            # Remember that if you change this you'll have to change the colorN's that
+            # your templates reference
+            # palette_size = 16
 
             # Optional: commands to run after the theme is applied.
             # Uses the same variables as templates: {{{{color0}}}}, {{{{color0.strip}}}}, etc.
+            # Named colors: {{{{background}}}}, {{{{foreground}}}}, {{{{primary}}}}, {{{{secondary}}}}
+            # Each supports .strip, .rgb, .red, .green, .blue suffixes
             #
             # [[hooks]]
             # command = "riverctl border-color-focused {{{{color0.strip}}}}"

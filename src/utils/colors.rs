@@ -58,3 +58,48 @@ pub fn scored_palette(path: &Path, palette_size: usize) -> Result<Vec<Rgb>> {
 
     Ok(scored.into_iter().map(|(_, color)| color).collect())
 }
+
+/// struct that contains the labeled colors
+pub struct LabeledColors {
+    pub background: Rgb,
+    pub foreground: Rgb,
+    pub primary: Rgb,
+    pub secondary: Rgb,
+}
+
+// assign the actual named labels to the palette
+pub fn assign_labels(palette: &[Rgb]) -> LabeledColors {
+    let primary = palette[0];
+    // TODO: make sure this is a different hue than the primary color
+    let secondary = if palette.len() > 1 {
+        palette[1]
+    } else {
+        palette[0]
+    };
+
+    // score each color for background
+    let mut background = (f64::NEG_INFINITY, palette[0]);
+    let mut foreground = (f64::NEG_INFINITY, palette[0]);
+
+    // for color in palette, score it in terms of bg and fg
+    for &c in palette {
+        let (_, s, l) = c.hsl();
+        let bg_score = (1.0 - l) * (1.0 - s);
+        let fg_score = l * (1.0 - s);
+
+        if bg_score > background.0 {
+            background = (bg_score, c);
+        }
+        if fg_score > foreground.0 {
+            foreground = (fg_score, c);
+        }
+    }
+
+    // TODO: This is gross but it works for now
+    LabeledColors {
+        background: background.1,
+        foreground: foreground.1,
+        primary,
+        secondary,
+    }
+}
