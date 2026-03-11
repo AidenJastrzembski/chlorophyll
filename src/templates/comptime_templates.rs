@@ -43,26 +43,28 @@ pub fn list_names() -> Vec<&'static str> {
 
 impl ComptimeTemplate {
     /// Write the starter template file and append a [[templates]] entry to config.toml.
-    /// TODO: add force flag to delete and reinstall
-    pub fn install(&self) -> Result<()> {
+    pub fn install(&self, force: bool) -> Result<()> {
         let dir = templates_dir()?;
         fs::create_dir_all(&dir).context("Failed to create templates directory")?;
 
         let dest = dir.join(self.filename);
-        if dest.exists() {
+        if dest.exists() && !force {
             bail!(
-                "Template already exists at {}\n  Remove it first if you want to reinstall.",
+                "Template already exists at {}\n  Use --force or -f if you want to reinstall.",
                 dest.display()
             );
         }
 
         // write the templates content to the file
         fs::write(&dest, self.content)
-            // NOTE: empty || can be used to ignore the value given
             .with_context(|| format!("Failed to write template to {}", dest.display()))?;
 
         // append a [[templates]] entry to config.toml
-        Config::append_template_entry(self.filename, self.reload)?;
+
+        if !force {
+            // skip writing it if forcing, assume its already in config
+            Config::append_template_entry(self.filename, self.reload)?;
+        }
 
         println!("Installed template to {}", dest.display());
         Ok(())
