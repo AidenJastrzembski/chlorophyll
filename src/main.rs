@@ -8,16 +8,15 @@ use crate::cli::{change_theme, list_themes, preview_palette};
 use crate::config::Config;
 use crate::templates::comptime_templates::{find_comptime_template, list_names};
 use crate::theme::{Theme, find_wallpaper};
-use crate::utils::colors;
 use crate::utils::cache::clear_cache;
+use crate::utils::colors;
 use crate::utils::history::reapply_last_wallpaper;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 // TODO: write tests for all commands
 //
-// TODO: list command should be a ratatui interactive screen with a searchable list, which
-// displays the name, and a color palette preview
+// TODO: Implement a kmeans stategy to better pick out colors from wallpapers
 //
 // TODO: find some way to allow user to specify wallpaper command overrides per theme...
 // i.e. user uses swaybg for wallpapers, but animated ones use swww
@@ -85,7 +84,16 @@ impl Cli {
                         reapply_last_wallpaper(&config, self.no_cache)?;
                     }
                     Command::List => {
-                        list_themes(&config.wallpaper_dir)?;
+                        if let Some(name) =
+                            list_themes(&config.wallpaper_dir, config.palette_size)?
+                        {
+                            let path = find_wallpaper(&config.wallpaper_dir, &name)?;
+                            let mut theme = Theme::new(path);
+                            if self.no_cache {
+                                theme = theme.skip_cache();
+                            }
+                            change_theme(&theme, &config)?;
+                        }
                     }
                     Command::From { name } => {
                         let path = find_wallpaper(&config.wallpaper_dir, &name)?;
