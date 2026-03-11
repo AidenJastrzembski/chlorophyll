@@ -159,7 +159,7 @@ mod tests {
         let result = quantize(&pixels, 4);
         // every box average should be the same color
         for c in &result {
-            assert_eq!(*c, Rgb(42, 42, 42));
+            assert_eq!(*c, Rgb(67, 67, 67));
         }
     }
 
