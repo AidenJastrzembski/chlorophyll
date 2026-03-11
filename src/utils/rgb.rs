@@ -56,3 +56,34 @@ impl Rgb {
         (h, s, l)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_black() {
+        assert_eq!(Rgb(0, 0, 0).hex(), "#000000");
+    }
+
+    #[test]
+    fn hex_white() {
+        assert_eq!(Rgb(255, 255, 255).hex(), "#ffffff");
+    }
+
+    #[test]
+    fn hsl_black() {
+        let (h, s, l) = Rgb(0, 0, 0).hsl();
+        assert_eq!(h, 0.0);
+        assert_eq!(s, 0.0);
+        assert_eq!(l, 0.0);
+    }
+
+    #[test]
+    fn hsl_white() {
+        let (h, s, l) = Rgb(255, 255, 255).hsl();
+        assert_eq!(h, 0.0);
+        assert_eq!(s, 0.0);
+        assert_eq!(l, 1.0);
+    }
+}

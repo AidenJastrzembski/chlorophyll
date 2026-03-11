@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use crate::utils::{cache, colors, rgb::Rgb};
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp"];
-const ANIMATED_EXTENSIONS: &[&str] = &["gif", "webp", "apng"];
 
 pub struct Theme {
     pub wallpaper: PathBuf,
@@ -26,15 +25,6 @@ impl Theme {
     pub fn skip_cache(mut self) -> Self {
         self.use_cache = false;
         self
-    }
-
-    /// detected from file extension
-    pub fn is_animated(&self) -> bool {
-        let ext = match self.wallpaper.extension() {
-            Some(ext) => ext.to_str().unwrap(),
-            None => return false,
-        };
-        ANIMATED_EXTENSIONS.contains(&ext.to_lowercase().as_str())
     }
 
     /// sha256 of wallpaper_path + ":" + palette_size + ":" + file_contents
@@ -73,7 +63,6 @@ impl Theme {
         cache::save_cache(&hash, &palette)?;
         Ok(palette)
     }
-
 }
 
 /// Try to find the name as a file on the system. if found, return the path as a PathBuf

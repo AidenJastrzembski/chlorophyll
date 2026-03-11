@@ -1,4 +1,4 @@
-use crate::theme::{Theme, list_wallpapers};
+use crate::theme::list_wallpapers;
 use anyhow::Result;
 
 /// TODO: eventually this will be a tui using ratatui
@@ -12,13 +12,8 @@ pub fn list_themes(wallpaper_dir: &str) -> Result<()> {
     }
     println!("Available wallpapers:\n");
     for path in wallpapers {
-        let theme = Theme::new(path.clone());
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
-        if theme.is_animated() {
-            println!("\t{stem} (animated)");
-        } else {
-            println!("\t{stem}");
-        }
+        println!("\t{stem}");
     }
     Ok(())
 }

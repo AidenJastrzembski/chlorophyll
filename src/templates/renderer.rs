@@ -215,3 +215,51 @@ pub fn render_templates(theme: &Theme, templates: &[Template], palette_size: usi
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_vars() -> HashMap<String, String> {
+        let mut vars = HashMap::new();
+        vars.insert("color0".to_string(), "#ff0000".to_string());
+        vars.insert("color1".to_string(), "#00ff00".to_string());
+        vars.insert("wallpaper".to_string(), "/home/user/wall.png".to_string());
+        vars
+    }
+
+    #[test]
+    fn substitute_vars() {
+        let vars = test_vars();
+        let input = "a: {{color0}}; b: {{color1}};";
+        assert_eq!(substitute(input, &vars), "a: #ff0000; b: #00ff00;");
+    }
+
+    #[test]
+    fn substitute_unknown_key_preserved() {
+        let vars = test_vars();
+        let result = substitute("x: {{nope}};", &vars);
+        assert_eq!(result, "x: {{nope}};");
+    }
+
+    #[test]
+    fn substitute_unclosed_brace_passthrough() {
+        let vars = test_vars();
+        assert_eq!(substitute("{{color0", &vars), "{{color0");
+    }
+
+    #[test]
+    fn substitute_realistic_css_snippet() {
+        let vars = test_vars();
+        let css = r#"
+            * {
+                background-color: {{color0}};
+                color: {{color1}};
+                background-image: url("{{wallpaper}}");
+            }"#;
+        let rendered = substitute(css, &vars);
+        assert!(rendered.contains("#ff0000"));
+        assert!(rendered.contains("#00ff00"));
+        assert!(rendered.contains("/home/user/wall.png"));
+    }
+}

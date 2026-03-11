@@ -75,6 +75,9 @@ impl ColorBox {
     /// perhaps a more robust solution would be to pick out the color which has the
     /// highest mode within some variance
     fn average(&self) -> Rgb {
+        if self.pixels.is_empty() {
+            return Rgb(0, 0, 0);
+        }
         let (mut r_sum, mut g_sum, mut b_sum) = (0u64, 0u64, 0u64);
         for &(r, g, b) in &self.pixels {
             r_sum += r as u64;
@@ -121,17 +124,16 @@ pub fn quantize(pixels: &[u8], max_colors: usize) -> Vec<Rgb> {
     let mut boxes: Vec<ColorBox> = vec![ColorBox::new(tuples)];
 
     while boxes.len() < max_colors {
-        // pick the box with the widest channel span.
+        // pick the box with the widest channel span that has at least 2 pixels
         let idx = boxes
-            // create iterator
             .iter()
-            // also get the index of the iterator
             .enumerate()
-            // of the boxes, select the one with the widest span
+            .filter(|(_, b)| b.pixels.len() >= 2)
             .max_by_key(|(_, b)| b.widest_span())
-            // return the index of that box
-            .map(|(i, _)| i)
-            .unwrap();
+            .map(|(i, _)| i);
+
+        // if no box can be split, stop early
+        let Some(idx) = idx else { break };
 
         // take the box out of the set of boxes
         let widest = boxes.swap_remove(idx);
@@ -144,4 +146,31 @@ pub fn quantize(pixels: &[u8], max_colors: usize) -> Vec<Rgb> {
 
     // collapse each box into its average color and collect results into Vec.
     boxes.iter().map(ColorBox::average).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uniform_pixels() {
+        // 10 identical pixels
+        let pixels: Vec<u8> = (0..10).flat_map(|_| vec![67, 67, 67]).collect();
+        let result = quantize(&pixels, 4);
+        // every box average should be the same color
+        for c in &result {
+            assert_eq!(*c, Rgb(42, 42, 42));
+        }
+    }
+
+    #[test]
+    fn respects_max_colors_limit() {
+        // create a gradient of distinct colors
+        let mut pixels = Vec::new();
+        for i in 0..100 {
+            pixels.extend_from_slice(&[(i * 2) as u8, 0, 0]);
+        }
+        let result = quantize(&pixels, 4);
+        assert_eq!(result.len(), 4);
+    }
 }
