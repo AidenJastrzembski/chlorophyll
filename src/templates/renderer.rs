@@ -19,6 +19,11 @@ fn insert_color_vars(vars: &mut HashMap<String, String>, prefix: &str, c: &Rgb) 
     );
     // CSS rgb values
     vars.insert(format!("{prefix}.rgb"), format!("{},{},{}", c.0, c.1, c.2));
+    // 0x prefixed hex for things like river which require it
+    vars.insert(
+        format!("{prefix}.0x"),
+        format!("0x{:02x}{:02x}{:02x}", c.0, c.1, c.2),
+    );
     // float based channels for tools like sway which want 0-1
     vars.insert(
         format!("{prefix}.red"),
