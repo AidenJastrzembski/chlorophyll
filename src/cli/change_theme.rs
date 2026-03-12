@@ -80,7 +80,7 @@ pub fn change_theme(
 
             for hook in &config.hooks {
                 let resolved = renderer::substitute(&hook.command, &vars);
-                match run_sh(&resolved) {
+                match spawn_sh(&resolved) {
                     Ok(()) => println!("Ran hook: {resolved}"),
                     Err(e) => eprintln!("warning: hook failed: {e}"),
                 }
