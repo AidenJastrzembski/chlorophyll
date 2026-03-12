@@ -5,7 +5,7 @@ use crate::utils::history;
 use anyhow::{Context, Result};
 use std::process::Command;
 
-/// run a shell command with sh -c
+/// run a shell command with sh -c, blocking until it exits
 fn run_sh(command: &str) -> Result<()> {
     let status = Command::new("sh")
         .arg("-c")
@@ -16,6 +16,17 @@ fn run_sh(command: &str) -> Result<()> {
     if !status.success() {
         eprintln!("warning: command exited with {status}: {command}");
     }
+
+    Ok(())
+}
+
+/// spawn a shell command with sh -c without waiting for it to exit
+fn spawn_sh(command: &str) -> Result<()> {
+    Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .spawn()
+        .with_context(|| format!("Failed to spawn: {command}"))?;
 
     Ok(())
 }
@@ -51,7 +62,7 @@ pub fn change_theme(
         let mut vars = std::collections::HashMap::new();
         vars.insert("wallpaper".to_string(), wallpaper_str.clone());
         let resolved = renderer::substitute(wp_cmd, &vars);
-        run_sh(&resolved).context("wallpaper_command failed")?;
+        spawn_sh(&resolved).context("wallpaper_command failed")?;
         println!("Ran wallpaper_command: {resolved}");
     }
 
