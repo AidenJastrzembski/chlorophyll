@@ -84,49 +84,49 @@ impl Config {
 
         let contents = format!(
             r#"# Chlorophyll configuration
-            # wallpaper_dir: directory containing your wallpaper images.
-            # Supported formats: png, jpg, jpeg, gif, webp
+# wallpaper_dir: directory containing your wallpaper images.
+# Supported formats: png, jpg, jpeg, gif, webp
 
-            wallpaper_dir = "{home}/.config/wallpapers"
+wallpaper_dir = "{home}/.config/wallpapers"
 
-            # Command to set the wallpaper. {{{{wallpaper}}}} is replaced with the path.
-            # wallpaper_command = "swaybg -i {{{{wallpaper}}}}"
+# Command to set the wallpaper. {{{{wallpaper}}}} is replaced with the path.
+# wallpaper_command = "swaybg -i {{{{wallpaper}}}}"
 
-            # Optional: kill the previous wallpaper daemon before spawning a new one
-            # wallpaper_kill = "pkill swaybg"
+# Optional: kill the previous wallpaper daemon before spawning a new one
+# wallpaper_kill = "pkill swaybg"
 
-            # Number of colors to extract from the wallpaper
-            # Remember that if you change this you'll have to change the colorN's that
-            # your templates reference
-            # palette_size = 16
+# Number of colors to extract from the wallpaper
+# Remember that if you change this you'll have to change the colorN's that
+# your templates reference
+# palette_size = 16
 
-            # Optional: commands to run after the theme is applied.
-            # Uses the same variables as templates: {{{{color0}}}}, {{{{color0.strip}}}}, etc.
-            # Named colors: {{{{background}}}}, {{{{foreground}}}}, {{{{primary}}}}, {{{{secondary}}}}
-            # Each supports .strip, .rgb, .red, .green, .blue suffixes
-            #
-            # [[hooks]]
-            # command = "riverctl border-color-focused {{{{color0.strip}}}}"
+# Optional: commands to run after the theme is applied.
+# Uses the same variables as templates: {{{{color0}}}}, {{{{color0.strip}}}}, etc.
+# Named colors: {{{{background}}}}, {{{{foreground}}}}, {{{{primary}}}}, {{{{secondary}}}}
+# Each supports .strip, .rgb, .red, .green, .blue suffixes
+#
+# [[hooks]]
+# command = "riverctl border-color-focused {{{{color0.strip}}}}"
 
-            # Optional: reload hooks for templates
-            # Place template files in ~/.config/chlorophyll/templates/
-            # Rendered output goes to ~/.cache/chlorophyll/
-            #
-            # [[templates]]
-            # name = "colors-waybar.css"
-            # reload = "killall -SIGUSR2 waybar"
-            #
-            # [[templates]]
-            # name = "colors-rofi.rasi"
+# Optional: reload hooks for templates
+# Place template files in ~/.config/chlorophyll/templates/
+# Rendered output goes to ~/.cache/chlorophyll/
+#
+# [[templates]]
+# name = "colors-waybar.css"
+# reload = "killall -SIGUSR2 waybar"
+#
+# [[templates]]
+# name = "colors-rofi.rasi"
 
-            # Optional: custom themes with per-theme wallpaper command overrides
-            # Useful when some wallpapers need a different tool (e.g. swww for animated)
-            #
-            # [theme.animated_bg]
-            # path = "{home}/.config/wallpapers/animated_bg.gif"
-            # wallpaper_command = "swww img {{{{wallpaper}}}}"
-            # wallpaper_kill = "pkill swww"
-            "#
+# Optional: custom themes with per-theme wallpaper command overrides
+# Useful when some wallpapers need a different tool (e.g. swww for animated)
+#
+# [theme.animated_bg]
+# path = "{home}/.config/wallpapers/animated_bg.gif"
+# wallpaper_command = "swww img {{{{wallpaper}}}}"
+# wallpaper_kill = "pkill swww"
+"#
         );
 
         if let Some(parent) = config_path.parent() {
