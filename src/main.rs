@@ -11,6 +11,8 @@ mod utils;
 // TODO: truly silence the output. we dont need to print much to the user at all we just need
 // it to work
 //
+// TODO: reapply doesnt do hooks
+//
 // TODO: add more templates for things that i use
 
 use anyhow::Result;
