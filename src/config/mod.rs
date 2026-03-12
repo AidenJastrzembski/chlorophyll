@@ -1,8 +1,9 @@
+use crate::utils::paths;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
 
 #[derive(Deserialize)]
 pub struct Template {
@@ -13,6 +14,13 @@ pub struct Template {
 #[derive(Deserialize)]
 pub struct Hook {
     pub command: String,
+}
+
+#[derive(Deserialize)]
+pub struct ThemeConfig {
+    pub path: String,
+    pub wallpaper_command: Option<String>,
+    pub wallpaper_kill: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -30,6 +38,8 @@ pub struct Config {
     /// lock screen
     #[serde(default)]
     pub hooks: Vec<Hook>,
+    #[serde(default)]
+    pub theme: HashMap<String, ThemeConfig>,
 }
 
 // https://serde.rs/attr-default.html
@@ -39,9 +49,8 @@ fn default_palette_size() -> usize {
 
 impl Config {
     /// returns the path to the config file
-    pub fn config_path() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME not set")?;
-        Ok(PathBuf::from(home).join(".config/chlorophyll/config.toml"))
+    pub fn config_path() -> Result<std::path::PathBuf> {
+        paths::config_file()
     }
 
     /// loads the config and returns it
@@ -71,7 +80,7 @@ impl Config {
             return Ok(());
         }
 
-        let home = std::env::var("HOME").context("HOME not set")?;
+        let home = std::env::var("HOME").unwrap_or_default();
 
         let contents = format!(
             r#"# Chlorophyll configuration
@@ -109,6 +118,14 @@ impl Config {
             #
             # [[templates]]
             # name = "colors-rofi.rasi"
+
+            # Optional: custom themes with per-theme wallpaper command overrides
+            # Useful when some wallpapers need a different tool (e.g. swww for animated)
+            #
+            # [theme.animated_bg]
+            # path = "{home}/.config/wallpapers/animated_bg.gif"
+            # wallpaper_command = "swww img {{{{wallpaper}}}}"
+            # wallpaper_kill = "pkill swww"
             "#
         );
 
@@ -123,7 +140,7 @@ impl Config {
         println!("Created config at {}", config_path.display());
 
         // create the templates directory, in the config/chlorophyll dir
-        let templates_dir = config_path.parent().unwrap().join("templates");
+        let templates_dir = paths::templates_dir()?;
         fs::create_dir_all(&templates_dir).context("Failed to create templates directory")?;
 
         Ok(())

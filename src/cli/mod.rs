@@ -6,7 +6,7 @@ pub(crate) use change_theme::change_theme;
 use list_themes::list_themes;
 use preview::preview_palette;
 
-use crate::config::Config;
+use crate::config::{Config, ThemeConfig};
 use crate::templates::comptime_templates::{find_comptime_template, list_names};
 use crate::theme::{Theme, find_wallpaper};
 use crate::utils::cache::clear_cache;
@@ -14,15 +14,16 @@ use crate::utils::colors;
 use crate::utils::history::reapply_last_wallpaper;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None, arg_required_else_help = true)]
 pub struct Cli {
     #[command(subcommand)]
     command: Command,
-    /// skip cache and force palette re-extraction
-    #[arg(long)]
-    no_cache: bool,
+    /// Force re-extraction of color palette (updates cache)
+    #[arg(long, short = 'f')]
+    force: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -80,31 +81,31 @@ impl Cli {
                 let config = Config::load()?;
                 match command {
                     Command::Reapply => {
-                        reapply_last_wallpaper(&config, self.no_cache)?;
+                        reapply_last_wallpaper(&config, self.force)?;
                     }
                     Command::List => {
-                        if let Some(name) = list_themes(&config.wallpaper_dir, config.palette_size)?
+                        if let Some(name) =
+                            list_themes(&config.wallpaper_dir, config.palette_size, &config.theme)?
                         {
-                            let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                            let mut theme = Theme::new(path);
-                            if self.no_cache {
+                            let (mut theme, tc) = resolve_theme(&name, &config)?;
+                            if self.force {
                                 theme = theme.skip_cache();
                             }
-                            change_theme(&theme, &config)?;
+                            let named = tc.map(|tc| (name.as_str(), tc));
+                            change_theme(&theme, &config, named)?;
                         }
                     }
                     Command::From { name } => {
-                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                        let mut theme = Theme::new(path);
-                        if self.no_cache {
+                        let (mut theme, tc) = resolve_theme(&name, &config)?;
+                        if self.force {
                             theme = theme.skip_cache();
                         }
-                        change_theme(&theme, &config)?;
+                        let named = tc.map(|tc| (name.as_str(), tc));
+                        change_theme(&theme, &config, named)?;
                     }
                     Command::Preview { name } => {
-                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                        let mut theme = Theme::new(path);
-                        if self.no_cache {
+                        let (mut theme, _tc) = resolve_theme(&name, &config)?;
+                        if self.force {
                             theme = theme.skip_cache();
                         }
                         let palette = theme.palette(config.palette_size)?;
@@ -112,9 +113,8 @@ impl Cli {
                         preview_palette(&palette, &name, &labels)?;
                     }
                     Command::Cache { name } => {
-                        let path = find_wallpaper(&config.wallpaper_dir, &name)?;
-                        let mut theme = Theme::new(path);
-                        if self.no_cache {
+                        let (mut theme, _tc) = resolve_theme(&name, &config)?;
+                        if self.force {
                             theme = theme.skip_cache();
                         }
                         // generating the palette will cache the results
@@ -126,5 +126,19 @@ impl Cli {
         }
 
         Ok(())
+    }
+}
+
+/// Check if `name` matches a named theme in config; otherwise fall back to wallpaper lookup.
+/// Returns (Theme, Option<&ThemeConfig>) — the ThemeConfig is Some when a named theme matched.
+fn resolve_theme<'a>(
+    name: &str,
+    config: &'a Config,
+) -> Result<(Theme, Option<&'a ThemeConfig>)> {
+    if let Some(tc) = config.theme.get(name) {
+        Ok((Theme::new(PathBuf::from(&tc.path)), Some(tc)))
+    } else {
+        let theme = find_wallpaper(&config.wallpaper_dir, name).map(Theme::new)?;
+        Ok((theme, None))
     }
 }

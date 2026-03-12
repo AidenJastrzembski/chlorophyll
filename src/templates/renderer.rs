@@ -1,24 +1,12 @@
 use crate::config::Template;
-use crate::theme::Theme;
 use crate::utils::colors;
+use crate::utils::paths;
 use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-
-/// return the path to the templates dir
-pub fn templates_dir() -> Result<PathBuf> {
-    let home = std::env::var("HOME").context("HOME not set")?;
-    Ok(PathBuf::from(home).join(".config/chlorophyll/templates"))
-}
-
-/// return the path to the cache dir
-fn output_dir() -> Result<PathBuf> {
-    let home = std::env::var("HOME").context("HOME not set")?;
-    Ok(PathBuf::from(home).join(".cache/chlorophyll"))
-}
 
 /// make all color format variants for a given prefix (hex, strip, rgb, red, green, blue).
 fn insert_color_vars(vars: &mut HashMap<String, String>, prefix: &str, c: &Rgb) {
@@ -152,61 +140,35 @@ fn run_reload(command: &str, template_name: &str) {
     }
 }
 
-/// render all templates in the templates dir
-pub fn render_templates(theme: &Theme, templates: &[Template], palette_size: usize) -> Result<()> {
-    // grab the templates dir
-    let templates_dir = templates_dir()?;
-    if !templates_dir.exists() {
-        // user hasn't setup any templates, thats fine. Templates are
-        // optional.
+/// render only the templates listed in config
+pub fn render_templates(
+    palette: &[Rgb],
+    wallpaper: &Path,
+    templates: &[Template],
+) -> Result<()> {
+    if templates.is_empty() {
         return Ok(());
     }
 
-    // grab all entries in the templates dir
-    let entries: Vec<PathBuf> = fs::read_dir(&templates_dir)
-        .context("Failed to read templates directory")?
-        // filter entries by first converting from a result to an option (.ok())
-        // get the path from the DirEntry
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        // filter out symlinks + dirs etc.
-        .filter(|p| p.is_file())
-        // into Vec
-        .collect();
+    let templates_dir = paths::templates_dir()?;
+    let wallpaper_str = wallpaper.to_string_lossy().to_string();
+    let vars = build_variables(palette, &wallpaper_str);
+    let out_dir = paths::cache_dir()?;
 
-    // if there was a templates folder but no actual templates
-    // once again, totally fine since templates are optional
-    if entries.is_empty() {
-        return Ok(());
-    }
+    for cfg in templates {
+        let path = templates_dir.join(&cfg.name);
+        if !path.is_file() {
+            eprintln!("warning: template '{}' not found in {}", cfg.name, templates_dir.display());
+            continue;
+        }
 
-    // generate the palette
-    let palette = theme.palette(palette_size)?;
-    let wallpaper_str = theme.wallpaper.to_string_lossy().to_string();
-    // generate the vars
-    let vars = build_variables(&palette, &wallpaper_str);
-    // get the cache dir
-    let out_dir = output_dir()?;
-
-    // for template (or more accurately, file) in templates/
-    for path in &entries {
-        match render_template(path, &out_dir, &vars) {
-            // if the template renders correctly...
+        match render_template(&path, &out_dir, &vars) {
             Ok(out_path) => {
-                // lil calm debug message
                 println!("Rendered template: {}", out_path.display());
-                // grab the file name which is then used to match against templates in
-                // the config file so that we can run the reload command if given one
-                let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
-                // if there is a [templates] section where name = the name of the template file
-                if let Some(cfg) = templates.iter().find(|c| c.name == filename) {
-                    // if there is a reload command
-                    if let Some(ref cmd) = cfg.reload {
-                        // run the reload command
-                        run_reload(cmd, &cfg.name);
-                    }
+                if let Some(ref cmd) = cfg.reload {
+                    run_reload(cmd, &cfg.name);
                 }
             }
-            // uh oh! wrong decision mark!
             Err(e) => {
                 eprintln!("warning: {e}");
             }

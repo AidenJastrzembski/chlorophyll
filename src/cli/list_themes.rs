@@ -1,8 +1,11 @@
+use crate::config::ThemeConfig;
 use crate::theme::{Theme, list_wallpapers};
 use crate::utils::cache;
 use crate::utils::colors::{self, LabeledColors};
 use crate::utils::rgb::Rgb;
+use std::path::Path;
 use anyhow::{Ok, Result};
+use std::collections::HashMap;
 use ratatui::{
     Frame,
     crossterm::event::{self, Event, KeyCode, KeyModifiers},
@@ -16,6 +19,7 @@ use ratatui::{
 struct WallpaperEntry {
     name: String,
     palette: Option<(Vec<Rgb>, LabeledColors)>,
+    is_custom_theme: bool,
 }
 
 // holds all the state for the list tui, filtering, and selection
@@ -97,18 +101,32 @@ impl ListApp {
     }
 }
 
+fn load_cached_palette(
+    path: &Path,
+    palette_size: usize,
+) -> Option<(Vec<Rgb>, LabeledColors)> {
+    let hash = Theme::new(path.to_path_buf()).hash(palette_size).ok()?;
+    let palette = cache::load_cache(&hash).ok().flatten()?;
+    let labels = colors::assign_labels(&palette);
+    Some((palette, labels))
+}
+
 /// interactive list search tui
 /// previews wallpapers in wallpaper dir and cached previews if available
-pub fn list_themes(wallpaper_dir: &str, palette_size: usize) -> Result<Option<String>> {
+pub fn list_themes(
+    wallpaper_dir: &str,
+    palette_size: usize,
+    custom_themes: &HashMap<String, ThemeConfig>,
+) -> Result<Option<String>> {
     let paths = list_wallpapers(wallpaper_dir)?;
-    if paths.is_empty() {
+    if paths.is_empty() && custom_themes.is_empty() {
         println!("No wallpapers found in {wallpaper_dir}");
         return Ok(None);
     }
 
     // only load palettes from cache here, don't extract new ones
     // since that would be slow for a big wallpaper dir
-    let wallpapers: Vec<WallpaperEntry> = paths
+    let mut wallpapers: Vec<WallpaperEntry> = paths
         .into_iter()
         .map(|path| {
             let name = path
@@ -117,18 +135,29 @@ pub fn list_themes(wallpaper_dir: &str, palette_size: usize) -> Result<Option<St
                 .unwrap_or("?")
                 .to_string();
 
-            let palette = Theme::new(path)
-                .hash(palette_size)
-                .ok()
-                .and_then(|hash| cache::load_cache(&hash).ok().flatten())
-                .map(|palette| {
-                    let labels = colors::assign_labels(&palette);
-                    (palette, labels)
-                });
+            let palette = load_cached_palette(&path, palette_size);
 
-            WallpaperEntry { name, palette }
+            WallpaperEntry {
+                name,
+                palette,
+                is_custom_theme: false,
+            }
         })
         .collect();
+
+    // append custom themes from config
+    let mut theme_names: Vec<&String> = custom_themes.keys().collect();
+    theme_names.sort();
+    for name in theme_names {
+        let tc = &custom_themes[name];
+        let palette = load_cached_palette(Path::new(&tc.path), palette_size);
+
+        wallpapers.push(WallpaperEntry {
+            name: name.clone(),
+            palette,
+            is_custom_theme: true,
+        });
+    }
 
     let mut app = ListApp::new(wallpapers);
     let mut selected_name: Option<String> = None;
@@ -204,7 +233,11 @@ fn draw_list(frame: &mut Frame, app: &mut ListApp, area: Rect) {
             } else {
                 Style::default().fg(Color::DarkGray)
             };
-            ListItem::new(Line::from(Span::styled(&entry.name, style)))
+            let mut spans = vec![Span::styled(&entry.name, style)];
+            if entry.is_custom_theme {
+                spans.push(Span::styled(" [theme]", Style::default().fg(Color::Cyan)));
+            }
+            ListItem::new(Line::from(spans))
         })
         .collect();
 
@@ -227,17 +260,17 @@ fn draw_search(frame: &mut Frame, app: &ListApp, area: Rect) {
 
 // shows the palette swatches for the selected wallpaper, or a placeholder if uncached
 fn draw_preview(frame: &mut Frame, app: &ListApp, area: Rect) {
-    if let Some(entry) = app.selected_entry() {
-        if let Some((palette, labels)) = &entry.palette {
-            let [title_area, swatches_area] =
-                Layout::vertical([Constraint::Length(2), Constraint::Fill(1)]).areas(area);
+    if let Some(entry) = app.selected_entry()
+        && let Some((palette, labels)) = &entry.palette
+    {
+        let [title_area, swatches_area] =
+            Layout::vertical([Constraint::Length(2), Constraint::Fill(1)]).areas(area);
 
-            let title = Paragraph::new(Line::from(&*entry.name).centered());
-            frame.render_widget(title, title_area);
+        let title = Paragraph::new(Line::from(&*entry.name).centered());
+        frame.render_widget(title, title_area);
 
-            draw_swatches(frame, palette, labels, swatches_area);
-            return;
-        }
+        draw_swatches(frame, palette, labels, swatches_area);
+        return;
     }
 
     let msg = Paragraph::new(Line::from("No cached palette").centered())
@@ -255,7 +288,7 @@ fn draw_preview(frame: &mut Frame, app: &ListApp, area: Rect) {
 // for the smaller area inside the list view
 fn draw_swatches(frame: &mut Frame, palette: &[Rgb], labels: &LabeledColors, area: Rect) {
     let cols_per_row = 8usize;
-    let num_rows = (palette.len() + cols_per_row - 1) / cols_per_row;
+    let num_rows = palette.len().div_ceil(cols_per_row);
 
     // terminal chars are ~2:1 height:width, so halve the width for square-ish cells
     let col_width = area.width as usize / cols_per_row;

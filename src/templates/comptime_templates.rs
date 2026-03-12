@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::templates::renderer::templates_dir;
+use crate::utils::paths;
 use anyhow::{Context, Result, bail};
 use std::fs;
 
@@ -44,7 +44,7 @@ pub fn list_names() -> Vec<&'static str> {
 impl ComptimeTemplate {
     /// Write the starter template file and append a [[templates]] entry to config.toml.
     pub fn install(&self, force: bool) -> Result<()> {
-        let dir = templates_dir()?;
+        let dir = paths::templates_dir()?;
         fs::create_dir_all(&dir).context("Failed to create templates directory")?;
 
         let dest = dir.join(self.filename);
