@@ -3,13 +3,17 @@ use crate::templates::renderer;
 use crate::theme::Theme;
 use crate::utils::history;
 use anyhow::{Context, Result};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 /// run a shell command with sh -c, blocking until it exits
 fn run_sh(command: &str) -> Result<()> {
+    let cmd = format!("{command} >/dev/null 2>&1");
     let status = Command::new("sh")
         .arg("-c")
-        .arg(command)
+        .arg(cmd)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .stdin(Stdio::null())
         .status()
         .with_context(|| format!("Failed to run: {command}"))?;
 
@@ -22,9 +26,13 @@ fn run_sh(command: &str) -> Result<()> {
 
 /// spawn a shell command with sh -c without waiting for it to exit
 fn spawn_sh(command: &str) -> Result<()> {
+    let cmd = format!("{command} >/dev/null 2>&1");
     Command::new("sh")
         .arg("-c")
-        .arg(command)
+        .arg(cmd)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .stdin(Stdio::null())
         .spawn()
         .with_context(|| format!("Failed to spawn: {command}"))?;
 
