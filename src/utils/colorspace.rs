@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy)]
+pub struct Hsl {
+    pub hue: f64,
+    pub saturation: f64,
+    pub lightness: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Rgb(pub u8, pub u8, pub u8);
 
@@ -8,7 +15,7 @@ impl Rgb {
         format!("#{:02x}{:02x}{:02x}", self.0, self.1, self.2)
     }
 
-    pub fn hsl(&self) -> (f64, f64, f64) {
+    pub fn hsl(&self) -> Hsl {
         // convert the [0-255] to [0-1]
         let r = self.0 as f64 / 255.0;
         let g = self.1 as f64 / 255.0;
@@ -24,7 +31,7 @@ impl Rgb {
 
         // if in a grey scale return early.
         if (max - min).abs() < 1e-10 {
-            return (0.0, 0.0, l);
+            return Hsl { hue: 0.0, saturation: 0.0, lightness: l };
         }
 
         // calculate the saturation
@@ -53,7 +60,7 @@ impl Rgb {
             ((r - g) / diff + 4.0) / 6.0
         };
 
-        (h, s, l)
+        Hsl { hue: h, saturation: s, lightness: l }
     }
 }
 
@@ -73,17 +80,17 @@ mod tests {
 
     #[test]
     fn hsl_black() {
-        let (h, s, l) = Rgb(0, 0, 0).hsl();
-        assert_eq!(h, 0.0);
-        assert_eq!(s, 0.0);
-        assert_eq!(l, 0.0);
+        let hsl = Rgb(0, 0, 0).hsl();
+        assert_eq!(hsl.hue, 0.0);
+        assert_eq!(hsl.saturation, 0.0);
+        assert_eq!(hsl.lightness, 0.0);
     }
 
     #[test]
     fn hsl_white() {
-        let (h, s, l) = Rgb(255, 255, 255).hsl();
-        assert_eq!(h, 0.0);
-        assert_eq!(s, 0.0);
-        assert_eq!(l, 1.0);
+        let hsl = Rgb(255, 255, 255).hsl();
+        assert_eq!(hsl.hue, 0.0);
+        assert_eq!(hsl.saturation, 0.0);
+        assert_eq!(hsl.lightness, 1.0);
     }
 }

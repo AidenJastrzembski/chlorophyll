@@ -1,5 +1,5 @@
-use crate::utils::colors::LabeledColors;
-use crate::utils::rgb::Rgb;
+use crate::utils::colorspace::Rgb;
+use crate::utils::palette::LabeledColors;
 use anyhow::{Ok, Result};
 use ratatui::{
     Frame,

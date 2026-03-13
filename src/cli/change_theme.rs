@@ -50,10 +50,10 @@ pub fn change_theme(
         .or(config.wallpaper_command.as_deref());
 
     // kill the previous wallpaper daemon if configured
-    if let Some(kill_cmd) = kill_cmd {
-        if run_sh(kill_cmd).is_ok() {
-            println!("Ran wallpaper_kill: {kill_cmd}");
-        }
+    if let Some(kill_cmd) = kill_cmd
+        && run_sh(kill_cmd).is_ok()
+    {
+        println!("Ran wallpaper_kill: {kill_cmd}");
     }
 
     // set the new wallpaper if configured
@@ -74,16 +74,16 @@ pub fn change_theme(
     };
 
     // run post-theme-change hooks with full template vars (colors + wallpaper)
-    if let Some(ref palette) = palette {
-        if !config.hooks.is_empty() {
-            let vars = renderer::build_variables(palette, &wallpaper_str);
+    if let Some(ref palette) = palette
+        && !config.hooks.is_empty()
+    {
+        let vars = renderer::build_variables(palette, &wallpaper_str);
 
-            for hook in &config.hooks {
-                let resolved = renderer::substitute(&hook.command, &vars);
-                match run_sh(&resolved) {
-                    Ok(()) => println!("Ran hook: {resolved}"),
-                    Err(e) => eprintln!("warning: hook failed: {e}"),
-                }
+        for hook in &config.hooks {
+            let resolved = renderer::substitute(&hook.command, &vars);
+            match run_sh(&resolved) {
+                Ok(()) => println!("Ran hook: {resolved}"),
+                Err(e) => eprintln!("warning: hook failed: {e}"),
             }
         }
     }

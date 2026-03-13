@@ -1,4 +1,4 @@
-use crate::utils::rgb::Rgb;
+use crate::utils::colorspace::Rgb;
 
 /// a bounding box in the pixel set.
 /// the axis with the most variance is split next
@@ -78,12 +78,12 @@ impl ColorBox {
         if self.pixels.is_empty() {
             return Rgb(0, 0, 0);
         }
-        let (mut r_sum, mut g_sum, mut b_sum) = (0u64, 0u64, 0u64);
-        for &(r, g, b) in &self.pixels {
-            r_sum += r as u64;
-            g_sum += g as u64;
-            b_sum += b as u64;
-        }
+        let (r_sum, g_sum, b_sum) =
+            self.pixels
+                .iter()
+                .fold((0u64, 0u64, 0u64), |(r, g, b), &(pr, pg, pb)| {
+                    (r + pr as u64, g + pg as u64, b + pb as u64)
+                });
         let n = self.pixels.len() as u64;
         Rgb((r_sum / n) as u8, (g_sum / n) as u8, (b_sum / n) as u8)
     }
@@ -91,20 +91,16 @@ impl ColorBox {
 
 /// computes the min and max values for each color channel.
 fn channel_ranges(pixels: &[(u8, u8, u8)]) -> ((u8, u8), (u8, u8), (u8, u8)) {
-    let (mut r_min, mut r_max) = (u8::MAX, u8::MIN);
-    let (mut g_min, mut g_max) = (u8::MAX, u8::MIN);
-    let (mut b_min, mut b_max) = (u8::MAX, u8::MIN);
-
-    for &(r, g, b) in pixels {
-        r_min = r_min.min(r);
-        r_max = r_max.max(r);
-        g_min = g_min.min(g);
-        g_max = g_max.max(g);
-        b_min = b_min.min(b);
-        b_max = b_max.max(b);
-    }
-
-    ((r_min, r_max), (g_min, g_max), (b_min, b_max))
+    pixels.iter().fold(
+        ((u8::MAX, u8::MIN), (u8::MAX, u8::MIN), (u8::MAX, u8::MIN)),
+        |((r_min, r_max), (g_min, g_max), (b_min, b_max)), &(r, g, b)| {
+            (
+                (r_min.min(r), r_max.max(r)),
+                (g_min.min(g), g_max.max(g)),
+                (b_min.min(b), b_max.max(b)),
+            )
+        },
+    )
 }
 
 /// turns a pixel buffer (used by image libs) into a vec with at most max_colors
@@ -166,10 +162,7 @@ mod tests {
     #[test]
     fn respects_max_colors_limit() {
         // create a gradient of distinct colors
-        let mut pixels = Vec::new();
-        for i in 0..100 {
-            pixels.extend_from_slice(&[(i * 2) as u8, 0, 0]);
-        }
+        let pixels: Vec<u8> = (0..100).flat_map(|i| [(i * 2) as u8, 0, 0]).collect();
         let result = quantize(&pixels, 4);
         assert_eq!(result.len(), 4);
     }

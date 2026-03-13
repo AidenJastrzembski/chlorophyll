@@ -1,8 +1,9 @@
 use crate::config::ThemeConfig;
 use crate::theme::{Theme, list_wallpapers};
+use crate::utils::PaletteSize;
 use crate::utils::cache;
-use crate::utils::colors::{self, LabeledColors};
-use crate::utils::rgb::Rgb;
+use crate::utils::colorspace::Rgb;
+use crate::utils::palette::{self, LabeledColors};
 use std::path::Path;
 use anyhow::{Ok, Result};
 use std::collections::HashMap;
@@ -103,19 +104,19 @@ impl ListApp {
 
 fn load_cached_palette(
     path: &Path,
-    palette_size: usize,
+    palette_size: PaletteSize,
 ) -> Option<(Vec<Rgb>, LabeledColors)> {
     let hash = Theme::new(path.to_path_buf()).hash(palette_size).ok()?;
-    let palette = cache::load_cache(&hash).ok().flatten()?;
-    let labels = colors::assign_labels(&palette);
-    Some((palette, labels))
+    let colors = cache::load_cache(&hash).ok().flatten()?;
+    let labels = palette::assign_labels(&colors);
+    Some((colors, labels))
 }
 
 /// interactive list search tui
 /// previews wallpapers in wallpaper dir and cached previews if available
 pub fn list_themes(
     wallpaper_dir: &str,
-    palette_size: usize,
+    palette_size: PaletteSize,
     custom_themes: &HashMap<String, ThemeConfig>,
 ) -> Result<Option<String>> {
     let paths = list_wallpapers(wallpaper_dir)?;
@@ -148,16 +149,15 @@ pub fn list_themes(
     // append custom themes from config
     let mut theme_names: Vec<&String> = custom_themes.keys().collect();
     theme_names.sort();
-    for name in theme_names {
+    wallpapers.extend(theme_names.into_iter().map(|name| {
         let tc = &custom_themes[name];
         let palette = load_cached_palette(Path::new(&tc.path), palette_size);
-
-        wallpapers.push(WallpaperEntry {
+        WallpaperEntry {
             name: name.clone(),
             palette,
             is_custom_theme: true,
-        });
-    }
+        }
+    }));
 
     let mut app = ListApp::new(wallpapers);
     let mut selected_name: Option<String> = None;

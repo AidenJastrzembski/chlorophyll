@@ -1,5 +1,5 @@
 use crate::utils::paths;
-use crate::utils::rgb::Rgb;
+use crate::utils::colorspace::Rgb;
 use anyhow::{Context, Result};
 use std::fs;
 

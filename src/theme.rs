@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::utils::{cache, colors, rgb::Rgb};
+use crate::utils::{PaletteSize, cache, colorspace::Rgb, palette};
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp"];
 
@@ -28,31 +28,31 @@ impl Theme {
     }
 
     /// sha256 of wallpaper_path + ":" + palette_size + ":" + file_contents
-    pub fn hash(&self, palette_size: usize) -> Result<String> {
+    pub fn hash(&self, palette_size: PaletteSize) -> Result<String> {
         let contents = fs::read(&self.wallpaper).context("Failed to read wallpaper file")?;
 
         let mut hasher = Sha256::new();
         hasher.update(self.wallpaper.to_string_lossy().as_bytes());
         hasher.update(b":");
-        hasher.update(palette_size.to_string().as_bytes());
+        hasher.update(palette_size.get().to_string().as_bytes());
         hasher.update(b":");
         hasher.update(&contents);
         Ok(format!("{:x}", hasher.finalize()))
     }
 
     /// check cache, compute if miss, return scored palette (highest score first)
-    pub fn palette(&self, palette_size: usize) -> Result<Vec<Rgb>> {
+    pub fn palette(&self, palette_size: PaletteSize) -> Result<Vec<Rgb>> {
         let hash = self.hash(palette_size)?;
 
-        if self.use_cache {
-            if let Some(cached) = cache::load_cache(&hash)? {
-                return Ok(cached);
-            }
+        if self.use_cache
+            && let Some(cached) = cache::load_cache(&hash)?
+        {
+            return Ok(cached);
         }
 
-        let palette = colors::scored_palette(&self.wallpaper, palette_size)?;
-        cache::save_cache(&hash, &palette)?;
-        Ok(palette)
+        let scored = palette::scored_palette(&self.wallpaper, palette_size)?;
+        cache::save_cache(&hash, &scored)?;
+        Ok(scored)
     }
 }
 

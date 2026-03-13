@@ -1,7 +1,7 @@
 use crate::config::Template;
-use crate::utils::colors;
+use crate::utils::colorspace::Rgb;
+use crate::utils::palette;
 use crate::utils::paths;
-use crate::utils::rgb::Rgb;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
@@ -40,15 +40,15 @@ fn insert_color_vars(vars: &mut HashMap<String, String>, prefix: &str, c: &Rgb) 
 }
 
 /// build vars hashmap with different color formats for different tools
-pub fn build_variables(palette: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
+pub fn build_variables(colors: &[Rgb], wallpaper_path: &str) -> HashMap<String, String> {
     let mut vars = HashMap::new();
 
-    for (i, c) in palette.iter().enumerate() {
+    for (i, c) in colors.iter().enumerate() {
         insert_color_vars(&mut vars, &format!("color{i}"), c);
     }
 
     // semantic labels derived from the palette
-    let labels = colors::assign_labels(palette);
+    let labels = palette::assign_labels(colors);
     insert_color_vars(&mut vars, "background", &labels.background);
     insert_color_vars(&mut vars, "foreground", &labels.foreground);
     insert_color_vars(&mut vars, "primary", &labels.primary);
@@ -118,7 +118,9 @@ fn render_template(
 
     // create the file in the cache based on the template name
     fs::create_dir_all(out_dir).context("Failed to create output directory")?;
-    let filename = template_path.file_name().unwrap();
+    let filename = template_path
+        .file_name()
+        .context("Template path has no filename")?;
     let out_path = out_dir.join(filename);
     fs::write(&out_path, rendered)
         .with_context(|| format!("Failed to write rendered template: {}", out_path.display()))?;

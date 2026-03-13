@@ -77,9 +77,7 @@ mod tests {
 
     #[test]
     fn find_known_template() {
-        let t = find_comptime_template("waybar");
-        assert!(t.is_some());
-        let t = t.unwrap();
+        let t = find_comptime_template("waybar").expect("template should exist");
         assert_eq!(t.name, "waybar");
         assert_eq!(t.filename, "colors-waybar.css");
     }

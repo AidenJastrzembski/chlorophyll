@@ -15,7 +15,8 @@ fn history_file() -> Result<PathBuf> {
 
 fn write_history(content: &str) -> Result<()> {
     let file = history_file()?;
-    fs::create_dir_all(file.parent().unwrap()).context("Failed to create cache dir")?;
+    let parent = file.parent().context("History file has no parent directory")?;
+    fs::create_dir_all(parent).context("Failed to create cache dir")?;
     fs::write(&file, content).context("Failed to write last wallpaper state")?;
     Ok(())
 }
@@ -49,17 +50,13 @@ pub fn reapply_last_wallpaper(config: &Config, force: bool) -> Result<()> {
             .theme
             .get(name)
             .with_context(|| format!("Named theme '{name}' not found in config"))?;
-        let mut theme = Theme::new(PathBuf::from(&tc.path));
-        if force {
-            theme = theme.skip_cache();
-        }
+        let theme = Theme::new(PathBuf::from(&tc.path));
+        let theme = if force { theme.skip_cache() } else { theme };
         change_theme(&theme, config, Some((name, tc)))?;
     } else {
         // plain wallpaper path
-        let mut theme = Theme::new(PathBuf::from(&entry));
-        if force {
-            theme = theme.skip_cache();
-        }
+        let theme = Theme::new(PathBuf::from(&entry));
+        let theme = if force { theme.skip_cache() } else { theme };
         change_theme(&theme, config, None)?;
     }
 

@@ -1,4 +1,5 @@
 use crate::utils::paths;
+use crate::utils::PaletteSize;
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -30,7 +31,7 @@ pub struct Config {
     pub wallpaper_kill: Option<String>,
     /// number of colors to extract from the wallpaper
     #[serde(default = "default_palette_size")]
-    pub palette_size: usize,
+    pub palette_size: PaletteSize,
     #[serde(default)]
     pub templates: Vec<Template>,
     /// post-theme-change hooks. can use {{color0}}, {{wallpaper}}, etc.
@@ -43,8 +44,8 @@ pub struct Config {
 }
 
 // https://serde.rs/attr-default.html
-fn default_palette_size() -> usize {
-    16
+fn default_palette_size() -> PaletteSize {
+    PaletteSize::new(16)
 }
 
 impl Config {
