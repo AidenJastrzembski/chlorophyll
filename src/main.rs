@@ -14,6 +14,10 @@ mod utils;
 // TODO: reapply doesnt do hooks
 //
 // TODO: add more templates for things that i use
+// - things like starship, ghostty,
+//
+// TODO: dedupe entries in the list command when they exist
+// both in the wallpaper dir and the config
 
 use anyhow::Result;
 use clap::Parser;
